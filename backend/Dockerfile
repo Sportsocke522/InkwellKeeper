@@ -3,5 +3,8 @@ WORKDIR /app
 COPY package.json yarn.lock ./
 RUN yarn install
 COPY . .
-CMD ["yarn", "nodemon"]
+
+# Führe die App als Hintergrundprozess aus
+CMD ["node", "index.js"]
+
 EXPOSE 5000

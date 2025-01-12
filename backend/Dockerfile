@@ -1,6 +1,7 @@
-FROM node:18
+FROM node:16
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
+COPY package.json yarn.lock ./
+RUN yarn install
 COPY . .
+CMD ["yarn", "nodemon"]
 EXPOSE 5000

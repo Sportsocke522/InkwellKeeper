@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 services:
   backend:
     build:
@@ -7,7 +7,7 @@ services:
       - "5000:5000"
     volumes:
       - ./backend:/app
-    command: npm start
+      - /app/node_modules
   frontend:
     build:
       context: ./frontend
@@ -15,4 +15,4 @@ services:
       - "3000:3000"
     volumes:
       - ./frontend:/app
-    command: npm start
+      - /app/node_modules

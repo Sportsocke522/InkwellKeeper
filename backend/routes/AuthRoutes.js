@@ -7,7 +7,7 @@ const {SignUpController, LoginController} = require("../controllers/AuthControll
 
 //sign up route here
 router.post("/auth/signup", (req, res) => {
-  console.log("SignUp route called");  // Überprüfen, ob die Route erreicht wird
+  //console.log("SignUp route called");  // Überprüfen, ob die Route erreicht wird
   SignUpController(req, res);
 });
 

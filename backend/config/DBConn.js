@@ -31,10 +31,30 @@ const DBConn = async () => {
             username VARCHAR(50) NOT NULL UNIQUE,
             email VARCHAR(100) NOT NULL UNIQUE,
             password VARCHAR(255) NOT NULL,
+            is_admin BOOLEAN DEFAULT FALSE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`
     );
     console.log(`${process.env.DB_TABLENAME} table created`);
+    await pool.query(
+      `CREATE TABLE IF NOT EXISTS \`settings\` (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          setting_key VARCHAR(50) NOT NULL UNIQUE, -- Schlüssel für die Einstellung (z. B. "is_ready")
+          setting_value VARCHAR(255) NOT NULL, -- Wert der Einstellung (z. B. "true" oder "false")
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )`
+    );
+    console.log(`Settings table created`);
+
+    await pool.query(
+      `INSERT INTO \`settings\` (setting_key, setting_value) 
+       VALUES 
+       ('is_ready', 'false'), 
+       ('allowRegistration', 'true')
+       ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`
+    );
+    
     
     //returning the pool to be using in controller functions
     return pool;

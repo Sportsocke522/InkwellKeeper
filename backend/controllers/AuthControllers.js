@@ -4,80 +4,71 @@ const token = require("../utils/jwt");
 
 //async await signup function which checks if all the input fields are filled then hashes the password to save it in the database using a query
 const SignUpController = async (req, res) => {
-  console.log(req.body); // Prüfe, ob die Anfrage korrekt gesendet wird
+  // Überprüfung, ob Registrierungen erlaubt sind
+  const [allowRegistrationResult] = await req.pool.query(
+    `SELECT setting_value FROM \`settings\` WHERE setting_key = 'allowRegistration'`
+  );
+  
+  const allowRegistration = allowRegistrationResult[0]?.setting_value === 'true';
+  
+  if (!allowRegistration) {
+    return res
+      .status(403)
+      .send("Registrations are currently closed. Please try again later.");
+  }
 
-  const [result] = await req.pool.query('SELECT 1');
-  console.log(result); // Sollte [ { '1': 1 } ] zurückgeben, wenn die Verbindung funktioniert
-
-
-
-
-
-
-
-  //declaration of variables from req.body
+  // Deklaration von Variablen aus req.body
   const { username, email, password } = req.body;
 
-  //checking if we get valid input
-  if (
-    !username ||
-    username === "" ||
-    !email ||
-    email === "" ||
-    !password ||
-    password === ""
-  ) {
-    //returning an error message in case of invalid input
+  // Überprüfung auf gültige Eingaben
+  if (!username || username === "" || !email || email === "" || !password || password === "") {
     return res.status(400).send("All Fields are Required");
   }
-  //using try catch block from here for using await keyword
+
   try {
-    //checking if user with same username exists
-    const [
-      checkUsername
-    ] = await req.pool.query(
-      `SELECT COUNT(*) AS count FROM ${process.env
-        .DB_TABLENAME} WHERE username = ?`,
+    // Überprüfung, ob ein Nutzer mit demselben Benutzernamen existiert
+    const [checkUsername] = await req.pool.query(
+      `SELECT COUNT(*) AS count FROM ${process.env.DB_TABLENAME} WHERE username = ?`,
       [username]
     );
     if (checkUsername[0].count > 0) {
-      return res.status(400).send("User with same username already exists");
+      return res.status(400).send("User with the same username already exists");
     }
 
-    //checking if user with same email exists
-    const [
-      checkEmail
-    ] = await req.pool.query(
-      `SELECT COUNT(*) AS count FROM ${process.env
-        .DB_TABLENAME} WHERE email = ?`,
+    // Überprüfung, ob ein Nutzer mit derselben E-Mail-Adresse existiert
+    const [checkEmail] = await req.pool.query(
+      `SELECT COUNT(*) AS count FROM ${process.env.DB_TABLENAME} WHERE email = ?`,
       [email]
     );
     if (checkEmail[0].count > 0) {
-      return res.status(400).send("User with same email already exists");
+      return res.status(400).send("User with the same email already exists");
     }
 
-    //if we dont get any error, now we continue with hashing password and then saving users
+    // Überprüfung der Nutzeranzahl, um festzustellen, ob der neue Nutzer ein Admin ist
+    const [userCount] = await req.pool.query(
+      `SELECT COUNT(*) AS count FROM ${process.env.DB_TABLENAME}`
+    );
+    const isAdmin = userCount[0].count === 0; // Admin, wenn keine Nutzer existieren
 
-    //hashing the password
-    const salt = await bcrypt.genSalt(10); // define the salt rounds
+    // Passwort-Hashing
+    const salt = await bcrypt.genSalt(10); // Salt-Runden definieren
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    //inserting the user
+    // Einfügen des Nutzers in die Datenbank
     const [insertUser] = await req.pool.query(
-      `INSERT INTO \`${process.env
-        .DB_TABLENAME}\` (username, email, password) VALUES (?, ?, ?)`,
-      [username, email, hashedPassword]
+      `INSERT INTO \`${process.env.DB_TABLENAME}\` (username, email, password, is_admin) VALUES (?, ?, ?, ?)`,
+      [username, email, hashedPassword, isAdmin]
     );
 
-    //sending a success response
-    // res.send("User Created");
-    res.status(201).json({ id: insertUser.insertId, username, email });
+    // Erfolgsantwort senden
+    res.status(201).json({ id: insertUser.insertId, username, email, is_admin: isAdmin });
   } catch (error) {
-    // basic error handling
-    console.error("Error during signup:", error); // log the error
-    res.status(500).send("Internal Server Error"); // return a 500 response in case of error
+    // Fehlerbehandlung
+    console.error("Error during signup:", error);
+    res.status(500).send("Internal Server Error");
   }
 };
+
 
 //async await login function which checks if all the input fields are filled then compares the hashed password saved in the database and sends a json web token if is successful
 const LoginController = async (req, res) => {

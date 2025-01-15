@@ -1,13 +1,13 @@
-//importing functions and libraries to create this home page which will push to login to get the token
-import { useEffect, useRef } from "react"; //react functions
-import styles from "../styles/Special.module.css"; //module css import
+// Importing necessary functions and libraries
+import { useEffect, useRef } from "react"; // React functions
+import styles from "../styles/Special.module.css"; // Module CSS import
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner"; //import toast notification
+import { toast } from "sonner"; // Import toast notification
 
-//creating the functional component
+// Creating the functional component
 function SpecialPage() {
   const navigate = useNavigate();
-  const toastWarningMessage = useRef(false); //for toast notification rendering once
+  const toastWarningMessage = useRef(false); // For toast notification rendering once
 
   useEffect(() => {
     document.title = "Login System - Special Page"; // Dynamically set the page title
@@ -22,7 +22,14 @@ function SpecialPage() {
     }
   }, [navigate]); // Dependency array includes `navigate` to prevent re-renders
 
-  //jsx code here
+  // Logout function
+  const handleLogout = () => {
+    localStorage.removeItem("token"); // Remove the token from localStorage
+    toast.success("Logged out successfully!"); // Show a success notification
+    navigate("/login"); // Redirect to the login page
+  };
+
+  // JSX code
   return (
     <>
       <div className={styles.container}>
@@ -32,10 +39,19 @@ function SpecialPage() {
           <p id={styles.p}>
             This is the special page which can only be accessed by a token.
           </p>
+          {/* Logout Button */}
+          <button
+            id={styles.logoutButton}
+            onClick={handleLogout}
+            className={styles.button}
+          >
+            Logout
+          </button>
         </div>
       </div>
     </>
   );
 }
-//exporting the function component
+
+// Exporting the functional component
 export default SpecialPage;

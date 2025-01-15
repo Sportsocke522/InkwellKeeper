@@ -1,18 +1,55 @@
 version: "3.8"
+
 services:
+
+
+
   backend:
     build:
       context: ./backend
     ports:
-      - "5000:5000"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
+      - "3000:3000"
+    
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=secret
+      - DB_NAME=inkwell
+    depends_on:
+      mysql:
+        condition: service_healthy   # Wartet, bis der MySQL-Container gesund ist
+
+
+
   frontend:
     build:
       context: ./frontend
     ports:
-      - "3000:3000"
+      - "5173:5173"
+    
+    environment:
+      - REACT_APP_BACKEND_URL=http://localhost:3000
+    depends_on:
+      - backend
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: inkwell
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+
+
+volumes:
+  mysql-data:

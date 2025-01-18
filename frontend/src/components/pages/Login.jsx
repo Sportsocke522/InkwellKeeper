@@ -4,6 +4,7 @@ import axios from "axios"; //axios for communication with backend
 import { toast } from "sonner"; //sonner for toast notification
 import styles from "../styles/Login.module.css"; //module css import
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 //creation of the login component function
 function LoginPage() {
@@ -12,64 +13,66 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
+  const { t } = useTranslation();
+
   useEffect(() => {
-    document.title = "Login System - LogIn Page"; //dinamically changes the tittle
+    document.title = t("login_page_title"); // Dynamically sets the page title
   });
 
   //login function with axios
   const handleLogin = async (e) => {
-    e.preventDefault(); // disables the reload on submission
-  
+    e.preventDefault(); // Prevents form reload
+
     try {
-      // Check if user has filled all required fields
+      // Check if all fields are filled
       if (!username || username === "" || !password || password === "") {
-        // Warn the user if all fields are not filled
-        toast.warning("All Fields are Required");
-        return; // return if the case matches
+        toast.warning(t("fields_required"));
+        return; // Exit function if a field is missing
       }
-  
-      // If user has filled all necessary fields, send axios post request
-      const res = await axios.post("http://localhost:3000/auth/auth/login", {
-        username: username,
-        password: password
-      });
-  
+
+      // Send login request to backend endpoint with credentials
+      const res = await axios.post(
+        "http://localhost:3000/auth/auth/login",
+        {
+          username: username,
+          password: password,
+        },
+        {
+          withCredentials: true, // Sends cookies with requests
+        }
+      );
+
       // On successful login
       if (res.status === 200) {
-        setUsername(""); // Empty the field after successful login
-        setPassword(""); // Empty the field after successful login
-        toast.success("Login Successful, Redirecting...");
-  
-        // Token will be sent from the server as a response called 'token'
-        const token = res.data.token;
-        localStorage.setItem("token", token); // Save the token in local storage
-  
-        // Immediately redirect the user to the root route
-        navigate("/");
+        console.log("Login successful, token is stored in cookie");
+        toast.success(t("login_successful_redirecting"));
+        setUsername(""); // Reset username
+        setPassword(""); // Reset password
+
+        console.log("Redirecting to dashboard");
+        navigate("/"); // Redirect to the homepage
       }
     } catch (error) {
-      // In case of error
       console.error("Error Logging User: ", error);
-      toast.error("Error Logging User");
+      toast.error(t("error_logging_user"));
     }
   };
-  
 
   //bootstrap components
   return (
     <>
       <div className={"card"} id={styles.card}>
         <div className={"card-body"}>
-          <h2 id={styles.h2}>LogIn</h2>
+          <h2 id={styles.h2}>{t("login")}</h2>
           <hr />
           <form onSubmit={handleLogin}>
             {/* for Username */}
             <div>
-              <label>Username : </label>
+              <label>{t("username_label")}</label>
               <input
                 type="text"
                 name="username"
-                placeholder={"Enter Username"}
+                placeholder={t("username_placeholder")}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
@@ -77,21 +80,19 @@ function LoginPage() {
 
             {/* for Password */}
             <div>
-              <label>Password : </label>
+              <label>{t("password_label")}</label>
               <input
                 type="password"
                 name="password"
-                placeholder={"Enter Password"}
+                placeholder={t("password_placeholder")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
 
-            {/* submit and switch to signup buttons */}
-
             {/* sign up */}
             <a>
-              <Link to="/signup">Don&apos;t have an account? SignUp</Link>
+              <Link to="/signup">{t("signup_prompt")}</Link>
             </a>
 
             {/* login */}
@@ -100,7 +101,7 @@ function LoginPage() {
               id={styles.button}
               type="submit"
             >
-              LogIn
+              {t("login")}
             </button>
           </form>
         </div>

@@ -1,12 +1,12 @@
-//importing necessarry libraries for signup function
+//importing necessary libraries for signup function
 import { useState, useEffect } from "react"; //use state for state variables
 import axios from "axios"; //axios for communication with backend
 import { toast } from "sonner"; //sonner for toast notification
 import styles from "../styles/Signup.module.css"; //module css import
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
-
-//creation of the sign up component function
+//creation of the sign-up component function
 function SignupPage() {
   //state variables declaration using useState
   const [username, setUsername] = useState("");
@@ -14,11 +14,13 @@ function SignupPage() {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
+  const { t } = useTranslation();
+
   useEffect(() => {
-    document.title = "Login System - SignUp Page"; //dinamically changes the tittle
+    document.title = t("signup_page_title"); // Dynamically sets the page title
   });
 
-  //axios post function which will first check for valid input, send a post request and then use sonner to render a toast notification
+  //axios post function which will first check for valid input, send a post request, and then use sonner to render a toast notification
   const handleSignup = async (e) => {
     e.preventDefault(); //disables the reload on submission
     try {
@@ -32,15 +34,15 @@ function SignupPage() {
         password === ""
       ) {
         //incase all fields are not filled warn the user
-        toast.warning("All Fields are Required");
-        return; //return if the the case matches
+        toast.warning(t("fields_required"));
+        return; //return if the case matches
       }
 
       //if user has filled all necessary fields send axios post request
       const res = await axios.post("http://localhost:3000/auth/auth/signup", {
         username: username,
         email: email,
-        password: password
+        password: password,
       });
 
       //on successful account creation
@@ -49,16 +51,16 @@ function SignupPage() {
         setEmail(""); //empty the field after successful signup
         setPassword(""); //empty the field after successful signup
         //notify the client that the user has been created
-        toast.success("User Created Sucessfully, Redirecting...");
+        toast.success(t("signup_successful_redirecting"));
       }
 
       setTimeout(() => {
         navigate("/login");
       }, 3000);
     } catch (error) {
-      //incase of error
+      //in case of error
       console.error("Error Creating User: ", error);
-      toast.error("Error Creating User");
+      toast.error(t("error_creating_user"));
     }
   };
 
@@ -67,16 +69,16 @@ function SignupPage() {
     <>
       <div className={"card"} id={styles.card}>
         <div className={"card-body"}>
-          <h2 id={styles.h2}>SignUp</h2>
+          <h2 id={styles.h2}>{t("signup")}</h2>
           <hr />
           <form onSubmit={handleSignup}>
             {/* for Username */}
             <div>
-              <label>Username : </label>
+              <label>{t("username_label")}</label>
               <input
                 type="text"
                 name="username"
-                placeholder={"Enter Username"}
+                placeholder={t("username_placeholder")}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
@@ -84,11 +86,11 @@ function SignupPage() {
 
             {/* for Email */}
             <div>
-              <label>Email : </label>
+              <label>{t("email_label")}</label>
               <input
                 type="email"
                 name="email"
-                placeholder={"Enter Email"}
+                placeholder={t("email_placeholder")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -96,26 +98,24 @@ function SignupPage() {
 
             {/* for Password */}
             <div>
-              <label>Password : </label>
+              <label>{t("password_label")}</label>
               <input
                 type="password"
                 name="password"
-                placeholder={"Enter Password"}
+                placeholder={t("password_placeholder")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
 
-            {/* submit and switch to login buttons */}
-
             {/* login */}
             <a>
-              <Link to="/login">Have an account? LogIn</Link>
+              <Link to="/login">{t("login_prompt")}</Link>
             </a>
 
             {/* signup */}
             <button className={"btn btn-success"} type="submit">
-              SignUp
+              {t("signup")}
             </button>
           </form>
         </div>

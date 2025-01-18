@@ -9,8 +9,13 @@ const DBConn = require("./config/DBConn");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
 
+const cookieParser = require("cookie-parser");
+
 //importing auth router here
-const router = require("./routes/AuthRoutes");
+const router_auth = require("./routes/AuthRoutes");
+
+//importing settings router here
+const router_settings = require("./routes/SettingsRoutes");
 
 //importing cors library
 const cors = require("cors");
@@ -19,7 +24,18 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 
 //using cors for avoiding cross origin resource sharing error while sending req to server
-app.use(cors());
+
+//app.use(cors());
+//app.options('*', cors(corsOptions)); // OPTIONS-Anfragen für CORS erlauben
+//app.use(cors(corsOptions));
+const corsOptions = {
+  origin: 'http://localhost:5173', // Erlaube nur diese Origin
+  credentials: true, // Cookies und andere credentials erlauben
+  allowedHeaders: ["Content-Type", "Authorization"], // Erlaube den Authorization-Header
+};
+app.use(cors(corsOptions));
+
+app.use(cookieParser());
 
 //middlewares for accepting incoming json and parsing data
 app.use(express.json());
@@ -41,7 +57,8 @@ let pool; // initialize the database connection pool
   });
 
   //declaring  auth router here
-  app.use("/auth", router);
+  app.use("/auth", router_auth);
+  app.use("/settings", router_settings);
 
   //making the app run on specified port
   app.listen(port, () => {

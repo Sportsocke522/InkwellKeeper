@@ -48,12 +48,20 @@ const DBConn = async () => {
     console.log(`Settings table created`);
 
     await pool.query(
-      `INSERT INTO \`settings\` (setting_key, setting_value) 
-       VALUES 
-       ('is_ready', 'false'), 
-       ('allowRegistration', 'true')
-       ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`
+      `INSERT INTO \`settings\` (setting_key, setting_value)
+       SELECT * FROM (
+           SELECT 'is_ready' AS setting_key, 'false' AS setting_value
+           UNION ALL
+           SELECT 'allowRegistration', 'true'
+           UNION ALL
+           SELECT 'language', 'en'
+       ) AS new_settings
+       WHERE NOT EXISTS (
+           SELECT 1 FROM \`settings\` s
+           WHERE s.setting_key = new_settings.setting_key
+       )`
     );
+    
     
     
     //returning the pool to be using in controller functions

@@ -72,53 +72,42 @@ const SignUpController = async (req, res) => {
 
 //async await login function which checks if all the input fields are filled then compares the hashed password saved in the database and sends a json web token if is successful
 const LoginController = async (req, res) => {
-  //declaration of variables from req.body
   const { username, password } = req.body;
 
-  //checking if we get valid input
+  // Überprüfung der Eingabefelder
   if (!username || username === "" || !password || password === "") {
-    //returning an error message in case of invalid input
     return res.status(400).send("All Fields are Required");
   }
-  //using try catch block from here for using await keyword
+
   try {
-    //checking if user with same username exists
-    const [
-      checkUsername
-    ] = await req.pool.query(
-      `SELECT COUNT(*) AS count FROM ${process.env
-        .DB_TABLENAME} WHERE username = ?`,
+    // Überprüfen, ob der Benutzer existiert
+    const [checkUsername] = await req.pool.query(
+      `SELECT COUNT(*) AS count FROM ${process.env.DB_TABLENAME} WHERE username = ?`,
       [username]
     );
     if (checkUsername[0].count === 0) {
       return res.status(400).send("User with this username doesn't exist");
     }
 
-    //selecting the user with the same username
+    // Benutzer abrufen
     const [checkUserpassword] = await req.pool.query(
       `SELECT * FROM ${process.env.DB_TABLENAME} WHERE username = ?`,
       [username]
     );
-    //the first user is the only user with the same username
     const foundUser = checkUserpassword[0];
 
-    //comparing the password with the hashed password in the database
+    // Überprüfen, ob das Passwort übereinstimmt
     const matchPassword = await bcrypt.compare(password, foundUser.password);
 
-    //if we dont get any error or the matchPassword doen't return false, now we continue with sending a json web token to the user
-
-    //if the matchpassword returns false
     if (!matchPassword) {
       return res.status(401).send("Incorrect Password");
     } else {
-      res.status(200)
-      //more information about the token function in utils/jwt
-      token(foundUser, res);
+      // Token generieren und an den Client senden
+      token(foundUser, res); // Hier das Token über das `token`-Modul senden
     }
   } catch (error) {
-    // basic error handling
-    console.error("Error during login:", error); // log the error
-    res.status(500).send("Internal Server Error"); // return a 500 response in case of error
+    console.error("Error during login:", error);
+    res.status(500).send("Internal Server Error");
   }
 };
 

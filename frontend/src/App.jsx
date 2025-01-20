@@ -4,7 +4,10 @@ import LoginPage from "./components/pages/Login";
 import SignupPage from "./components/pages/Register";
 import SpecialPage from "./components/pages/Dashboard";
 import Setupwizard from "./components/pages/Setupwizard";
+import Catalog from "./components/pages/Catalog";
 import Page from "./components/pages/Page";
+import DeckListPage from "./components/pages/DeckListPage";
+import DeckDetailPage from "./components/pages/DeckDetailPage";
 import { Toaster } from "sonner";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import i18n from "./i18n";
@@ -49,6 +52,9 @@ function App() {
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/Login" element={<LoginPage />} />
           <Route path="/Setupwizard" element={<Setupwizard />} />
+          <Route path="/Catalog" element={<Catalog />} />
+          <Route path="/decks" element={<DeckListPage />} />
+          <Route path="/decks/:deckId" element={<DeckDetailPage />} />
           <Route path="*" element={<Page />} />
         </Routes>
       </Router>

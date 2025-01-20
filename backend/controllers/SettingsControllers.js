@@ -2,6 +2,9 @@
 const bcrypt = require("bcryptjs"); //for hashing user's password startWizzward
 const token = require("../utils/jwt");
 
+const fs = require('fs');
+const path = require('path');
+
 const is_ready = async (req, res) => {
   try {
     // Aktuellen Benutzer ermitteln
@@ -169,6 +172,162 @@ const set_language = async (req, res) => {
 };
 
 
+const get_game = async (req, res) => {
+  try {
+    await req.pool.query("USE ??", [process.env.DB_DATABASE]);
+    const [result] = await req.pool.query(
+      "SELECT setting_value FROM settings WHERE setting_key = 'game' LIMIT 1"
+    );
+
+    if (result.length === 0) {
+      return res.status(404).json({ message: "Game setting not found" });
+    }
+
+    return res.status(200).json({ game: result[0].setting_value });
+  } catch (error) {
+    console.error("Error fetching game:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+const set_game = async (req, res) => {
+  try {
+    const { game } = req.body;
+    if (!game) {
+      return res.status(400).json({ message: "Game is required" });
+    }
+
+    await req.pool.query("USE ??", [process.env.DB_DATABASE]);
+    await req.pool.query(
+      "UPDATE settings SET setting_value = ? WHERE setting_key = 'game'",
+      [game]
+    );
+
+    if (game === "Lorcana") {
+      // Tabellen erstellen
+      await req.pool.query(`
+        CREATE TABLE IF NOT EXISTS cards (
+          id INT PRIMARY KEY,
+          set_code VARCHAR(50),
+          number INT,
+          name VARCHAR(255),
+          full_name VARCHAR(255),
+          type VARCHAR(50),
+          color VARCHAR(50),
+          cost INT,
+          strength INT,
+          willpower INT,
+          rarity VARCHAR(50),
+          story VARCHAR(255),
+          inkwell BOOLEAN
+        );
+      `);
+
+      await req.pool.query(`
+        CREATE TABLE IF NOT EXISTS card_translations (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          card_id INT,
+          language VARCHAR(10),
+          flavor_text TEXT,
+          full_text TEXT,
+          FOREIGN KEY (card_id) REFERENCES cards(id)
+        );
+      `);
+
+      await req.pool.query(`
+        CREATE TABLE IF NOT EXISTS card_images (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          card_id INT,
+          language VARCHAR(10),
+          full_url TEXT,
+          thumbnail_url TEXT,
+          foil_mask_url TEXT,
+          FOREIGN KEY (card_id) REFERENCES cards(id)
+        );
+      `);
+
+      // Benutzer-Sammlungstabelle aktualisieren
+      await req.pool.query(`
+        CREATE TABLE IF NOT EXISTS user_collections (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          user_id INT,
+          card_id INT,
+          is_foil BOOLEAN DEFAULT FALSE,
+          FOREIGN KEY (card_id) REFERENCES cards(id)
+        );
+      `);
+
+      // Deck-Tabelle erstellen
+      await req.pool.query(`
+        CREATE TABLE IF NOT EXISTS decks (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          user_id INT,
+          name VARCHAR(255),
+          description TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      // Deck-Karten-Tabelle erstellen
+      await req.pool.query(`
+        CREATE TABLE IF NOT EXISTS deck_cards (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          deck_id INT,
+          card_id INT,
+          user_collection_id INT,
+          FOREIGN KEY (deck_id) REFERENCES decks(id),
+          FOREIGN KEY (card_id) REFERENCES cards(id),
+          FOREIGN KEY (user_collection_id) REFERENCES user_collections(id)
+        );
+      `);
+
+      // JSON-Dateien einlesen und importieren
+      const dirPath = path.join(__dirname, '../games/lorcana');
+      const files = fs.readdirSync(dirPath).filter(file => file.endsWith('.json'));
+
+      for (const file of files) {
+        const filePath = path.join(dirPath, file);
+        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+
+        const language = data.metadata.language;
+        for (const card of data.cards) {
+          await req.pool.query(`
+            INSERT IGNORE INTO cards (id, set_code, number, name, full_name, type, color, cost, strength, willpower, rarity, story, inkwell)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            card.id, card.setCode, card.number, card.name, card.fullName, card.type, card.color,
+            card.cost, card.strength, card.willpower, card.rarity, card.story, card.inkwell
+          ]);
+
+          await req.pool.query(`
+            INSERT INTO card_translations (card_id, language, flavor_text, full_text)
+            VALUES (?, ?, ?, ?)
+          `, [
+            card.id, language, card.flavorText || '', card.fullText || ''
+          ]);
+
+          const { full, thumbnail, foilMask } = card.images || {};
+          if (full || thumbnail || foilMask) {
+            await req.pool.query(`
+              INSERT INTO card_images (card_id, language, full_url, thumbnail_url, foil_mask_url)
+              VALUES (?, ?, ?, ?, ?)
+            `, [
+              card.id, language, full || '', thumbnail || '', foilMask || ''
+            ]);
+          }
+        }
+      }
+    }
+
+    return res.status(200).json({ message: "Game updated and tables populated successfully" });
+  } catch (error) {
+    console.error("Error updating Game:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
+
 const set_setup_wizard = async (req, res) => {
   try {
     // Aktuellen Benutzer ermitteln
@@ -207,4 +366,4 @@ const set_setup_wizard = async (req, res) => {
 
 
 
-module.exports = { is_ready, is_admin, is_new_reg, set_new_reg, set_setup_wizard, get_language, set_language };
+module.exports = { is_ready, is_admin, is_new_reg, set_new_reg, set_setup_wizard, get_language, set_language, get_game, set_game };

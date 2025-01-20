@@ -1,0 +1,74 @@
+.container {
+    max-width: 800px;
+    margin: auto;
+  }
+  
+  .cardGrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+  
+  .card {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: center;
+    width: 150px;
+    cursor: pointer;
+  }
+  
+  .card img {
+    max-width: 100%;
+  }
+  
+  .removeBtn {
+    background: red;
+    color: white;
+    border: none;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  
+  .popupOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+  }
+  
+  .popupContent {
+    background: white;
+    padding: 20px;
+    max-width: 500px;
+    margin: 50px auto;
+  }
+  
+  .selected {
+    border: 2px solid green;
+  }
+  .foil {
+    border: 2px solid gold;
+    background-color: rgba(255, 215, 0, 0.2);
+  }  
+  .popupContent {
+    max-height: 80vh;  /* Begrenze die Höhe auf 80% des Viewports */
+    overflow-y: auto;  /* Ermögliche vertikales Scrollen */
+    padding: 20px;
+    background: white;
+    border-radius: 10px;
+  }
+  
+  .cardGrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    max-height: 60vh; /* Begrenze die Kartenhöhe innerhalb des Popups */
+    overflow-y: auto;
+  }
+  .foil {
+    border: 2px solid gold;
+    background-color: rgba(255, 215, 0, 0.2);
+    box-shadow: 0 0 10px gold;
+  }

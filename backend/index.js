@@ -17,6 +17,9 @@ const router_auth = require("./routes/AuthRoutes");
 //importing settings router here
 const router_settings = require("./routes/SettingsRoutes");
 
+//importing settings router here
+const router_cards = require("./routes/CardsRoutes");
+
 //importing cors library
 const cors = require("cors");
 
@@ -59,6 +62,7 @@ let pool; // initialize the database connection pool
   //declaring  auth router here
   app.use("/auth", router_auth);
   app.use("/settings", router_settings);
+  app.use("/cards", router_cards);
 
   //making the app run on specified port
   app.listen(port, () => {

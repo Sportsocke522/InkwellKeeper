@@ -14,6 +14,9 @@ function SetupWizard() {
   const [currentPage, setCurrentPage] = useState(0);
   const [isNewRegEnabled, setIsNewRegEnabled] = useState(null); // Status für neue Registrierungen
   const [selectedLanguage, setSelectedLanguage] = useState("en"); // Standardmäßig Englisch
+  const [selectedGame, setSelectedGame] = useState("Lorcana");
+  const [isLoading, setIsLoading] = useState(false);
+
 
   useEffect(() => {
     document.title = t("setup_wizard_title");
@@ -91,26 +94,38 @@ function SetupWizard() {
     }
   };
 
-  const saveLanguage = async () => {
+  const savegeneralServerSettings = async () => {
     try {
+      setIsLoading(true);
+
       await i18n.changeLanguage(selectedLanguage); // Sprache im i18n-Modul ändern
   
-      const response = await fetch("http://localhost:3000/settings/set_language", {
+      const languageResponse = await fetch("http://localhost:3000/settings/set_language", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ language: selectedLanguage }),
       });
+
+      // Spiel speichern und Tabellen erstellen
+      const gameResponse = await fetch("http://localhost:3000/settings/set_game", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ game: selectedGame }),
+      });
   
-      if (!response.ok) {
-        throw new Error("Failed to save language setting");
+      if (!languageResponse.ok || !gameResponse.ok) {
+        throw new Error("Failed to save settings");
       }
   
-      toast.success(t("language_saved_successfully"));
+      toast.success(t("language_saved_successfully"));//String Anpassen
       setCurrentPage(2); // Gehe zur nächsten Seite
     } catch (error) {
       console.error("Error saving language:", error);
       toast.error(t("language_save_failed"));
+    } finally {
+      setIsLoading(false); // Ladezustand deaktivieren
     }
   };
 
@@ -145,6 +160,17 @@ function SetupWizard() {
   };
 
   const renderPageContent = () => {
+
+    if (isLoading) {
+      return (
+        <div className={styles.loading}>
+          <div className={styles.spinner}></div>
+          <p>{t("loading_wait")}</p>
+        </div>
+      );
+    }
+
+
     switch (currentPage) {
       case 0:
         return (
@@ -170,8 +196,17 @@ function SetupWizard() {
                 </option>
               ))}
             </select>
+              <p>{t("select_game")}</p>
+              <select
+                value={selectedGame}
+                onChange={(e) => setSelectedGame(e.target.value)}
+              >
+                <option value="Lorcana">Lorcana</option>
+                {/* Weitere Spiele hier hinzufügen */}
+              </select>
+
             <button onClick={() => setCurrentPage(0)}>{t("back")}</button>
-            <button onClick={saveLanguage}>{t("next")}</button>
+            <button onClick={savegeneralServerSettings}>{t("next")}</button>
           </div>
         );
   

@@ -1,8 +1,11 @@
 import { useEffect, useState, useRef } from "react";
-import styles from "../styles/DeckList.module.css";
+import styles from "../styles/App.module.css";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+
+
+import placeholder from "../styles/images/card_placeholder.png";
 
 function DeckListPage() {
   const navigate = useNavigate();
@@ -12,6 +15,8 @@ function DeckListPage() {
   const [showPopup, setShowPopup] = useState(false);
   const [deckName, setDeckName] = useState("");
   const [deckDescription, setDeckDescription] = useState("");
+
+
   
 
 
@@ -94,52 +99,99 @@ function DeckListPage() {
   };
 
   return (
-    <div className={styles.container}>
-      <h1>{t("deck_list_title")}</h1>
-      <button className={styles.newDeckButton} onClick={() => setShowPopup(true)}>
-        {t("create_new_deck")}
-      </button>
+      <div className={styles.container}>
+        <div className={styles.contentWrapper}>
+          <h1 className={styles.dashboardTitle}>{t("deck_list_title")}</h1>
 
-      <div className={styles.deckGrid}>
-        {Array.isArray(decks) && decks.length > 0 ? (
-          decks.map((deck) => (
-            <div
-              key={deck.id}
-              className={styles.deckCard}
-              onClick={() => navigate(`/decks/${deck.id}`)}
+          <div className={styles.cartContainer}>
 
-              
-            >
-              <img src={deck.coverImage || "/placeholder.jpg"} alt={deck.name} />
-              <h2>{deck.name}</h2>
+            <div className={`${styles.cardGrid} ${styles.deckContainer}`}>
+
+              {Array.isArray(decks) && decks.length > 0 ? (
+                decks.map((deck) => (
+                  <div
+                    key={deck.id}
+                    className={`${styles.card} ${styles.deck}`}
+                    onClick={() => navigate(`/decks/${deck.id}`)}
+                  >
+
+                    <div className={styles.cardImageWrapper}>
+                      <img
+                        src={deck.thumbnail && deck.thumbnail.trim() !== "" ? deck.thumbnail : placeholder}
+                        alt={deck.name}
+                        className={styles.cardImage}
+                      />
+                    </div>
+
+
+                    <h2>{deck.name}</h2>
+                  </div>
+                ))
+              ) : (
+                <p>{t("no_decks_found")}</p>
+              )}
+
+              <div className={`${styles.card} ${styles.addDeck}`} onClick={() => setShowPopup(true)}>
+                <h2>
+                  {t("create_new_deck")}
+                </h2>
+              </div>
+
             </div>
-          ))
-        ) : (
-          <p>{t("no_decks_found")}</p>
-        )}
-      </div>
 
-      {showPopup && (
-        <div className={styles.popupOverlay} onClick={() => setShowPopup(false)}>
-          <div className={styles.popupContent} onClick={(e) => e.stopPropagation()}>
-            <h2>{t("create_new_deck")}</h2>
-            <input
-              type="text"
-              placeholder={t("deck_name")}
-              value={deckName}
-              onChange={(e) => setDeckName(e.target.value)}
-            />
-            <textarea
-              placeholder={t("deck_description")}
-              value={deckDescription}
-              onChange={(e) => setDeckDescription(e.target.value)}
-            />
-            <button onClick={createDeck}>{t("create")}</button>
-            <button onClick={() => setShowPopup(false)}>{t("cancel")}</button>
+              {showPopup && (
+                <div className={styles.popupOverlay} onClick={() => setShowPopup(false)}>
+                  <div className={styles.popupContent} onClick={(e) => e.stopPropagation()}>
+                    <h2>{t("create_new_deck")}</h2>
+
+                    <input
+                      type="text"
+                      placeholder={t("deck_name")}
+                      value={deckName}
+                      onChange={(e) => setDeckName(e.target.value)}
+                    />
+
+                    <textarea
+                      placeholder={t("deck_description")}
+                      value={deckDescription}
+                      onChange={(e) => setDeckDescription(e.target.value)}
+                    />
+
+                    <button className="btn-primary" onClick={createDeck}>{t("create")}</button>
+                    <button className="btn-danger" onClick={() => setShowPopup(false)}>{t("cancel")}</button>
+                  </div>
+                </div>
+              )}
+
+
           </div>
         </div>
-      )}
-    </div>
+      </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+ 
+      
+
+      
+
+      
+    
   );
 }
 

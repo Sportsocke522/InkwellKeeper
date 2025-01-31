@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import styles from "../styles/Catalog.module.css";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 function CatalogPage() {
   const navigate = useNavigate();
@@ -15,7 +16,11 @@ function CatalogPage() {
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedRarity, setSelectedRarity] = useState("");
   const [selectedSet, setSelectedSet] = useState("");
+  const [sortBy, setSortBy] = useState("id");
+  const [sortOrder, setSortOrder] = useState("ASC");
   const [isLoading, setIsLoading] = useState(true);
+  const [friendsCards, setFriendsCards] = useState([]);
+
 
   const [selectedCard, setSelectedCard] = useState(null); // Für das Popup
   const [ownedQuantity, setOwnedQuantity] = useState(0); // Für normale Karten
@@ -32,33 +37,45 @@ const incrementFoil = () => setFoilQuantity((prev) => prev + 1);
 const decrementFoil = () => setFoilQuantity((prev) => Math.max(prev - 1, 0));
 
 
-  const fetchCards = async () => {
-    setIsLoading(true);
-    try {
+const fetchCards = async () => {
+  setIsLoading(true);
+  try {
       const queryParams = new URLSearchParams({
-        set_code: selectedSet || "",
-        color: selectedColor || "",
-        rarity: selectedRarity || "",
-        search: debouncedSearchQuery || "",
+          set_code: selectedSet || "",
+          color: selectedColor || "",
+          rarity: selectedRarity || "",
+          search: debouncedSearchQuery || "",
+          sort_by: sortBy,
+          sort_order: sortOrder,
       }).toString();
 
       const response = await fetch(`http://localhost:3000/cards/filtered?${queryParams}`, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
       });
 
       if (!response.ok) throw new Error("Failed to fetch filtered cards");
 
       const data = await response.json();
-      setCards(data.cards.length ? data.cards : []);
-    } catch (error) {
+
+      // Duplikate basierend auf der Karten-ID entfernen
+      const uniqueCards = data.cards.reduce((acc, card) => {
+          if (!acc.find((c) => c.id === card.id)) {
+              acc.push(card);
+          }
+          return acc;
+      }, []);
+
+      setCards(uniqueCards.length ? uniqueCards : []);
+  } catch (error) {
       console.error("Error fetching cards:", error);
       setCards([]);
-    } finally {
+  } finally {
       setIsLoading(false);
-    }
-  };
+  }
+};
+
 
   const fetchOwnedCards = async () => {
     try {
@@ -127,44 +144,82 @@ const decrementFoil = () => setFoilQuantity((prev) => Math.max(prev - 1, 0));
   };
   
   
-  
-
-  useEffect(() => {
-    document.title = t("catalog_title");
-
-    const fetchStatus = async () => {
-      try {
-        const [adminResponse, readyResponse] = await Promise.all([
-          fetch("http://localhost:3000/settings/is_admin", {
+  const fetchFriendsCards = async () => {
+    try {
+        const response = await fetch("http://localhost:3000/cards/collection/friends", {
             method: "GET",
-            headers: { "Content-Type": "application/json" },
             credentials: "include",
-          }),
-          fetch("http://localhost:3000/settings/is_ready", {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-          }),
-        ]);
+        });
 
-        if (!adminResponse.ok || !readyResponse.ok) {
-          throw new Error("Failed to fetch status");
+        if (!response.ok) throw new Error("Failed to fetch friends' cards");
+
+        const data = await response.json();
+
+        if (!data.cards || data.cards.length === 0) {
+          console.warn("No friend cards found.");
+        } else {
+            console.log("Fetched friends' cards:", data.cards);
         }
 
-        const adminData = await adminResponse.json();
-        const readyData = await readyResponse.json();
+        setFriendsCards(data.cards || []);
+    } catch (error) {
+        console.error("Error fetching friends' cards:", error);
+    }
+};
 
-        setIsAdmin(adminData.is_admin === 1);
-        setIsReady(readyData.is_ready);
+
+
+
+useEffect(() => {
+  document.title = t("catalog_title");
+
+  const fetchStatus = async () => {
+      try {
+          const [adminResponse, readyResponse] = await Promise.all([
+              fetch("http://localhost:3000/settings/is_admin", {
+                  method: "GET",
+                  headers: { "Content-Type": "application/json" },
+                  credentials: "include",
+              }),
+              fetch("http://localhost:3000/settings/is_ready", {
+                  method: "GET",
+                  headers: { "Content-Type": "application/json" },
+                  credentials: "include",
+              }),
+          ]);
+
+          if (!adminResponse.ok || !readyResponse.ok) {
+              throw new Error("Failed to fetch status");
+          }
+
+          const adminData = await adminResponse.json();
+          const readyData = await readyResponse.json();
+
+          setIsAdmin(adminData.is_admin === 1);
+          setIsReady(readyData.is_ready);
       } catch (error) {
-        console.error("Error fetching status:", error);
+          console.error("Error fetching status:", error);
       }
-    };
+  };
 
-    fetchStatus();
-    fetchCards();
-    fetchOwnedCards();
-  }, []);
+  fetchStatus();
+  fetchCards();
+  fetchOwnedCards();
+
+  const checkSeeFriends = async () => {
+      const response = await fetch("http://localhost:3000/settings/get_seeFriends", {
+          method: "GET",
+          credentials: "include",
+      });
+      const data = await response.json();
+      if (data.seeFriendsCollection === "true") {
+          fetchFriendsCards();
+      }
+  };
+
+  checkSeeFriends();
+}, []);
+
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -176,7 +231,15 @@ const decrementFoil = () => setFoilQuantity((prev) => Math.max(prev - 1, 0));
 
   useEffect(() => {
     fetchCards();
-  }, [selectedColor, selectedRarity, selectedSet, debouncedSearchQuery]);
+  }, [selectedColor, selectedRarity, selectedSet, debouncedSearchQuery,  sortBy, sortOrder]);
+
+
+  const handleSortChange = (e) => {
+    const [field, order] = e.target.value.split("-");
+    setSortBy(field);
+    setSortOrder(order);
+  };
+
 
   const resetFilters = () => {
     setSearchQuery("");
@@ -219,53 +282,75 @@ const decrementFoil = () => setFoilQuantity((prev) => Math.max(prev - 1, 0));
   
   
   
-  const saveCardQuantity = async (cardId, normalQuantity, foilQuantity) => {
+  const saveCardQuantity = async (cardId, normalQuantity, foilQuantity, setLocalQuantity, oldQuantity) => {
     try {
-      setIsLoading(true);
-      const response = await fetch(`http://localhost:3000/cards/collection/add`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          card_id: cardId,
-          normal_quantity: normalQuantity,
-          foil_quantity: foilQuantity,
-        }),
-      });
-  
-      if (!response.ok) {
-        throw new Error("Failed to save card quantity");
-      }
-  
-      // Warte kurz, um sicherzustellen, dass die Datenbank aktualisiert ist
-      setTimeout(() => {
+        console.log("Sending data to API:", { card_id: cardId, normal_quantity: normalQuantity, foil_quantity: foilQuantity });
+        setIsLoading(true);
+
+        const response = await fetch(`http://localhost:3000/cards/collection/add`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({
+                card_id: cardId,
+                normal_quantity: normalQuantity,
+                foil_quantity: foilQuantity,
+            }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            switch (result.code) {
+                case "CARD_IN_DECK":
+                    toast.error(t("error_card_in_deck"));  // Übersetzung des Fehlers
+                    break;
+                case "USER_ID_MISSING":
+                    toast.error(t("error_user_id_missing"));
+                    break;
+                case "CARD_ID_MISSING":
+                    toast.error(t("error_card_id_missing"));
+                    break;
+                default:
+                    toast.error(t("error_generic"));
+            }
+            throw new Error(result.code);
+        }
+
+        toast.success(t("success_update"));
         fetchOwnedCards();
-      }, 500);
     } catch (error) {
-      console.error("Error saving card quantity:", error);
+        console.error("Error saving card quantity:", error.message);
+        //toast.error(t("error_generic"));
+        setLocalQuantity(oldQuantity); // Setze den Wert auf den alten Zustand zurück
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
-  };
-  
-  
-  
-  
-  
-  
-  const updateOwnedQuantity = (change) => {
+};
+
+// Normale Karten aktualisieren
+const updateOwnedQuantity = async (change) => {
+    const oldQuantity = ownedQuantity; // Speichere den aktuellen Wert
     const newQuantity = Math.max(Number(ownedQuantity) + change, 0);
-    setOwnedQuantity(newQuantity);
-    saveCardQuantity(selectedCard.id, newQuantity, foilQuantity);
-  };
-  
-  const updateFoilQuantity = (change) => {
+
+    setOwnedQuantity(newQuantity);  // UI sofort aktualisieren
+
+    await saveCardQuantity(selectedCard.id, newQuantity, foilQuantity, setOwnedQuantity, oldQuantity);
+};
+
+// Foil-Karten aktualisieren
+const updateFoilQuantity = async (change) => {
+    const oldQuantity = foilQuantity; // Speichere den aktuellen Wert
     const newQuantity = Math.max(Number(foilQuantity) + change, 0);
-    setFoilQuantity(newQuantity);
-    saveCardQuantity(selectedCard.id, ownedQuantity, newQuantity);
-  };
+
+    setFoilQuantity(newQuantity);  // UI sofort aktualisieren
+
+    await saveCardQuantity(selectedCard.id, ownedQuantity, newQuantity, setFoilQuantity, oldQuantity);
+};
+
+
   
   
 
@@ -329,6 +414,19 @@ const decrementFoil = () => setFoilQuantity((prev) => Math.max(prev - 1, 0));
           </button>
         </div>
       </div>
+
+
+      <div className={styles.sortContainer}>
+        <label>{t("sort_by")}:</label>
+        <select value={`${sortBy}-${sortOrder}`} onChange={handleSortChange} className={styles.sortSelect}>
+          <option value="id-ASC">{t("sort_id_asc")}</option>
+          <option value="id-DESC">{t("sort_id_desc")}</option>
+          <option value="cost-ASC">{t("sort_cost_asc")}</option>
+          <option value="cost-DESC">{t("sort_cost_desc")}</option>
+        </select>
+      </div>
+
+
       <div className={styles.cardGrid}>
         {isLoading ? (
             <p>{t("loading_message")}</p>
@@ -339,21 +437,32 @@ const decrementFoil = () => setFoilQuantity((prev) => Math.max(prev - 1, 0));
             //console.log("Foil set contains:", ownedCards?.foil?.has(Number(card.id)));
 
             return (
-                <div
-                key={card.id}
-                className={`${styles.card} 
-                    ${ownedCards?.normal?.has(Number(card.id)) ? styles.owned : ""} 
-                    ${ownedCards?.foil?.has(Number(card.id)) ? styles.foilOwned : ""}`}
-                onClick={() => openPopup(card)}
-                >
-                <img
-                    src={card.images.thumbnail || "/path/to/default-image.jpg"}
-                    alt={card.name}
-                    className={styles.cardThumbnail}
-                />
-                <p className={styles.cardName}>{card.name}</p>
-                <p className={styles.cardFullName}>{card.fullName}</p>
-                </div>
+              <div
+                  key={card.id}
+                  className={`${styles.card} 
+                      ${ownedCards?.normal?.has(Number(card.id)) ? styles.owned : ""} 
+                      ${ownedCards?.foil?.has(Number(card.id)) ? styles.foilOwned : ""}`}
+                  onClick={() => openPopup(card)}
+              >
+                  {friendsCards.filter(friendCard => friendCard.card_id === card.id).length > 0 && (
+                      <div className={`${styles.friendTag} ${'friendTag'}`}   style={{ position: 'absolute', top: '5px', left: '5px', backgroundColor: 'red', color: 'white', padding: '5px' }}>
+                        {friendsCards.filter(friendCard => friendCard.card_id === card.id).slice(0, 2).map((friendCard, index) => (
+                          <span key={index}>{friendCard.username}</span>
+                        ))}
+                        {friendsCards.filter(friendCard => friendCard.card_id === card.id).length > 2 && (
+                          <span>+{friendsCards.filter(friendCard => friendCard.card_id === card.id).length - 2}</span>
+                        )}
+                      </div>
+                    )}
+                  <img
+                      src={card.images.thumbnail || "/path/to/default-image.jpg"}
+                      alt={card.name}
+                      className={styles.cardThumbnail}
+                  />
+                  <p className={styles.cardName}>{card.name}</p>
+                  <p className={styles.cardFullName}>{card.fullName}</p>
+              </div>
+          
             );
             })
         ) : (

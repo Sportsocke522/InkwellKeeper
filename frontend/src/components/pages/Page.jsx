@@ -1,6 +1,6 @@
 //this is a simple 404 page with some custom styling and routing
 import { useEffect } from "react";
-import styles from "../styles/Page.module.css";
+//import styles from "../styles/Page.module.css";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 

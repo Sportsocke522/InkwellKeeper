@@ -8,6 +8,10 @@ import Catalog from "./components/pages/Catalog";
 import Page from "./components/pages/Page";
 import DeckListPage from "./components/pages/DeckListPage";
 import DeckDetailPage from "./components/pages/DeckDetailPage";
+import MyCollectionPage from "./components/pages/MyCollectionPage";
+import FriendsCollection from "./components/pages/FriendsCollection";
+import Settings from "./components/pages/Settings";
+import Header from "./components/component/Header";
 import { Toaster } from "sonner";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import i18n from "./i18n";
@@ -47,7 +51,9 @@ function App() {
 
       {/* Router setup */}
       <Router>
+        <Header />
         <Routes>
+
           <Route path="/" element={<SpecialPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/Login" element={<LoginPage />} />
@@ -55,6 +61,9 @@ function App() {
           <Route path="/Catalog" element={<Catalog />} />
           <Route path="/decks" element={<DeckListPage />} />
           <Route path="/decks/:deckId" element={<DeckDetailPage />} />
+          <Route path="/MyCollection" element={<MyCollectionPage />} />
+          <Route path="/FriendsCollection" element={<FriendsCollection />} />
+          <Route path="/Settings" element={<Settings />} />
           <Route path="*" element={<Page />} />
         </Routes>
       </Router>

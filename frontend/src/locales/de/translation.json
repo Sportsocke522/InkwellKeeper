@@ -95,6 +95,15 @@
   "cards_added": "Karten erfolgreich hinzugefügt",
   "select_cards_to_add": "Wähle Karten zum Hinzufügen",
   "add_selected_cards": "Ausgewählte Karten hinzufügen",
-  "card_removed": "Karte entfernt"
+  "card_removed": "Karte entfernt",
+  "deck_updated": "Deck erfolgreich aktualisiert!",
+  "deck_image_updated": "Deckbild erfolgreich aktualisiert!",
+  "reset_cover": "Cover zurücksetzen",
+  "finish_editing": "Bearbeitung abschließen",
+  "edit": "Bearbeiten",
+  "card_count": "Kartenanzahl",
+  "set_as_cover": "Als Cover festlegen",
+  "no_cards_in_deck": "Keine Karten im Deck",
+  "no_cards_available": "Keine Karten verfügbar"
   
 }

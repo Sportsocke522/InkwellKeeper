@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react"; //use state for state variables
 import axios from "axios"; //axios for communication with backend
 import { toast } from "sonner"; //sonner for toast notification
-import styles from "../styles/Login.module.css"; //module css import
+//import styles from "../styles/Login.module.css"; //module css import
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 

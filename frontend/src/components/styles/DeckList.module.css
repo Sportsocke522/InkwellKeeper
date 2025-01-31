@@ -89,3 +89,7 @@
     background: #dc3545;
   }
   
+  .selected {
+    border: 2px solid #4caf50;
+    background-color: rgba(76, 175, 80, 0.2);
+  }

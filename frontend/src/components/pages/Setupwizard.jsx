@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import styles from "../styles/SetupWizard.module.css";
+import styles from "../styles/App.module.css";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { availableLanguages } from "../../i18n";
@@ -16,8 +16,9 @@ function SetupWizard() {
   const [selectedLanguage, setSelectedLanguage] = useState("en"); // Standardmäßig Englisch
   const [selectedGame, setSelectedGame] = useState("Lorcana");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSeeFriends, setIsSeeFriends] = useState(null);
 
-
+  
   useEffect(() => {
     document.title = t("setup_wizard_title");
 
@@ -94,6 +95,28 @@ function SetupWizard() {
     }
   };
 
+  const fetchSeeFriendsStatus = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/settings/get_seeFriends", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+  
+      if (!response.ok) {
+        throw new Error("Failed to fetch new see Friends status");
+      }
+  
+      const data = await response.json();
+      setIsSeeFriends(data.seeFriendsCollection); // Setze direkt den Boolean-Wert
+  
+      console.log("isreg erhalten (aus Antwort):", data.seeFriendsCollection);
+    } catch (error) {
+      console.error("Error fetching new registration status:", error);
+      toast.error(t("fetch_new_reg_failed"));
+    }
+  };
+
   const savegeneralServerSettings = async () => {
     try {
       setIsLoading(true);
@@ -132,6 +155,7 @@ function SetupWizard() {
   useEffect(() => {
     if (currentPage === 1) {
       fetchNewRegStatus();
+      fetchSeeFriendsStatus();
     }
   }, [currentPage]);
 
@@ -160,111 +184,166 @@ function SetupWizard() {
   };
 
   const renderPageContent = () => {
+    return(
+    <div className={styles.wizardOverlay}>
+      <div className={styles.container}>
+        <div className={styles.contentWrapper}>
+          {isLoading ? (
+            <div className={styles.loading}>
+              <div className={styles.spinner}></div>
+              <p>{t("loading_wait")}</p>
+            </div>
+          ) : (
+            (() => {
+              switch (currentPage) {
+                case 0:
+                  return (
+                    <div>
+                      <h2>{t("welcome_to_setup")}</h2>
+                      <p>{t("configure_server")}</p>
+                      <button className={`${styles.btn} ${styles["btn-primary"]}`} onClick={() => setCurrentPage(1)}>
+                        {t("next")}
+                      </button>
+                    </div>
+                  );
 
-    if (isLoading) {
-      return (
-        <div className={styles.loading}>
-          <div className={styles.spinner}></div>
-          <p>{t("loading_wait")}</p>
+                case 1:
+                  return (
+                    <div>
+                      <h2>{t("general_server_settings")}</h2>
+                      <p>{t("select_language")}</p>
+                      <select
+                        className={styles.dropdown}
+                        value={selectedLanguage}
+                        onChange={(e) => setSelectedLanguage(e.target.value)}
+                      >
+                        {availableLanguages.map((lang) => (
+                          <option key={lang.code} value={lang.code}>
+                            {lang.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      <p>{t("select_game")}</p>
+                      <select
+                        className={styles.dropdown}
+                        value={selectedGame}
+                        onChange={(e) => setSelectedGame(e.target.value)}
+                      >
+                        <option value="Lorcana">Lorcana</option>
+                      </select>
+
+                      <button className={`${styles.btn} ${styles["btn-danger"]}`} onClick={() => setCurrentPage(0)}>
+                        {t("back")}
+                      </button>
+                      <button className={`${styles.btn} ${styles["btn-primary"]}`} onClick={savegeneralServerSettings}>
+                        {t("next")}
+                      </button>
+                    </div>
+                  );
+
+                case 2:
+                  return (
+                    <div>
+                      <h2>{t("user_control")}</h2>
+                      <p>{t("enable_disable_registrations")}</p>
+                      <label className={styles.switch}>
+                        <input
+                          type="checkbox"
+                          checked={isNewRegEnabled ?? false}
+                          onChange={async (e) => {
+                            const newValue = e.target.checked;
+                            setIsNewRegEnabled(newValue);
+                            try {
+                              const response = await fetch(
+                                "http://localhost:3000/settings/set_new_reg",
+                                {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  credentials: "include",
+                                  body: JSON.stringify({ allowRegistration: newValue }),
+                                }
+                              );
+                              if (!response.ok) throw new Error("Failed to update registration setting");
+
+                              toast.success(
+                                `${t("registrations_enabled")} ${newValue ? t("enabled") : t("disabled")}.`
+                              );
+                            } catch (error) {
+                              console.error("Error updating registration status:", error);
+                              toast.error(t("update_registration_failed"));
+                              setIsNewRegEnabled(!newValue);
+                            }
+                          }}
+                        />
+                        <span className={styles.slider}></span>
+                      </label>
+
+                      <p>{t("enable_disable_seeFriends")}</p>
+                      <label className={styles.switch}>
+                        <input
+                          type="checkbox"
+                          checked={isSeeFriends ?? false}
+                          onChange={async (e) => {
+                            const newValue = e.target.checked;
+                            setIsSeeFriends(newValue);
+                            try {
+                              const response = await fetch(
+                                "http://localhost:3000/settings/set_seeFriends",
+                                {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  credentials: "include",
+                                  body: JSON.stringify({ seeFriendsCollection: newValue }),
+                                }
+                              );
+                              if (!response.ok) throw new Error("Failed to update see Friends setting");
+
+                              toast.success(
+                                `${t("see_friends_enabled")} ${newValue ? t("enabled") : t("disabled")}.`
+                              );
+                            } catch (error) {
+                              console.error("Error updating see friends status:", error);
+                              toast.error(t("update_see_friends_failed"));
+                              setIsSeeFriends(!newValue);
+                            }
+                          }}
+                        />
+                        <span className={styles.slider}></span>
+                      </label>
+                      <br></br>
+                      <button className={`${styles.btn} ${styles["btn-danger"]}`} onClick={() => setCurrentPage(1)}>
+                        {t("back")}
+                      </button>
+                      <button className={`${styles.btn} ${styles["btn-primary"]}`} onClick={() => setCurrentPage(3)}>
+                        {t("next")}
+                      </button>
+                    </div>
+                  );
+
+                case 3:
+                  return (
+                    <div>
+                      <h2>{t("setup_complete")}</h2>
+                      <p>{t("everything_ready")}</p>
+                      <button className={`${styles.btn} ${styles["btn-danger"]}`} onClick={() => setCurrentPage(2)}>
+                        {t("back")}
+                      </button>
+                      <button className={`${styles.btn} ${styles["btn-primary"]}`} onClick={finalizeSetup}>
+                        {t("finish")}
+                      </button>
+                    </div>
+                  );
+
+                default:
+                  return null;
+              }
+            })()
+          )}
         </div>
-      );
-    }
-
-
-    switch (currentPage) {
-      case 0:
-        return (
-          <div>
-            <h2>{t("welcome_to_setup")}</h2>
-            <p>{t("configure_server")}</p>
-            <button onClick={() => setCurrentPage(1)}>{t("next")}</button>
-          </div>
-        );
-  
-      case 1:
-        return (
-          <div>
-            <h2>{t("general_server_settings")}</h2>
-            <p>{t("select_language")}</p>
-            <select
-              value={selectedLanguage}
-              onChange={(e) => setSelectedLanguage(e.target.value)}
-            >
-              {availableLanguages.map((lang) => (
-                <option key={lang.code} value={lang.code}>
-                  {lang.name}
-                </option>
-              ))}
-            </select>
-              <p>{t("select_game")}</p>
-              <select
-                value={selectedGame}
-                onChange={(e) => setSelectedGame(e.target.value)}
-              >
-                <option value="Lorcana">Lorcana</option>
-                {/* Weitere Spiele hier hinzufügen */}
-              </select>
-
-            <button onClick={() => setCurrentPage(0)}>{t("back")}</button>
-            <button onClick={savegeneralServerSettings}>{t("next")}</button>
-          </div>
-        );
-  
-      case 2:
-        return (
-          <div>
-            <h2>{t("user_control")}</h2>
-            <p>{t("enable_disable_registrations")}</p>
-            <label className={styles.switch}>
-              <input
-                type="checkbox"
-                checked={isNewRegEnabled ?? false}
-                onChange={async (e) => {
-                  const newValue = e.target.checked;
-                  setIsNewRegEnabled(newValue);
-                  try {
-                    const response = await fetch(
-                      "http://localhost:3000/settings/set_new_reg",
-                      {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        credentials: "include",
-                        body: JSON.stringify({ allowRegistration: newValue }),
-                      }
-                    );
-                    if (!response.ok) {
-                      throw new Error("Failed to update registration setting");
-                    }
-                    toast.success(
-                      `${t("registrations_enabled")} ${newValue ? t("enabled") : t("disabled")}.`
-                    );
-                  } catch (error) {
-                    console.error("Error updating registration status:", error);
-                    toast.error(t("update_registration_failed"));
-                    setIsNewRegEnabled(!newValue);
-                  }
-                }}
-              />
-              <span className={styles.slider}></span>
-            </label>
-            <button onClick={() => setCurrentPage(1)}>{t("back")}</button>
-            <button onClick={() => setCurrentPage(3)}>{t("next")}</button>
-          </div>
-        );
-  
-      case 3:
-        return (
-          <div>
-            <h2>{t("setup_complete")}</h2>
-            <p>{t("everything_ready")}</p>
-            <button onClick={() => setCurrentPage(2)}>{t("back")}</button>
-            <button onClick={finalizeSetup}>{t("finish")}</button>
-          </div>
-        );
-  
-      default:
-        return null;
-    }
+      </div>
+    </div>
+    )
   };
   
 

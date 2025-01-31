@@ -56,6 +56,8 @@ const DBConn = async () => {
            UNION ALL
            SELECT 'language', 'en'
            UNION ALL
+           SELECT 'seeFriendsCollection', false
+           UNION ALL
            SELECT 'game', 'Lorcana'
        ) AS new_settings
        WHERE NOT EXISTS (

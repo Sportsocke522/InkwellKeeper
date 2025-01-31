@@ -264,6 +264,7 @@ const set_game = async (req, res) => {
           user_id INT,
           name VARCHAR(255),
           description TEXT,
+          image_path VARCHAR(255),
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
       `);
@@ -364,6 +365,147 @@ const set_setup_wizard = async (req, res) => {
 };
 
 
+const get_seeFriends = async (req, res) => {
+  try {
+    await req.pool.query("USE ??", [process.env.DB_DATABASE]);
+    const [result] = await req.pool.query(
+      "SELECT setting_value FROM settings WHERE setting_key = 'seeFriendsCollection' LIMIT 1"
+    );
+
+    if (result.length === 0) {
+      return res.status(404).json({ message: "See Friends setting not found" });
+    }
+
+    return res.status(200).json({ seeFriendsCollection: result[0].setting_value });
+  } catch (error) {
+    console.error("Error fetching see friends:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+const set_seeFriends = async (req, res) => {
+  try {
+    const { seeFriendsCollection } = req.body;
+    if (typeof seeFriendsCollection !== "boolean") {
+      return res.status(400).json({ message: "Invalid input" });
+    }
+
+    await req.pool.query("USE ??", [process.env.DB_DATABASE]);
+
+    await req.pool.query(
+      "UPDATE settings SET setting_value = ? WHERE setting_key = 'seeFriendsCollection'",
+      [seeFriendsCollection ? "true" : "false"]
+    );
+
+    return res.status(200).json({ message: "See Friends setting updated" });
+  } catch (error) {
+    console.error("Error updating See Friends setting:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
 
 
-module.exports = { is_ready, is_admin, is_new_reg, set_new_reg, set_setup_wizard, get_language, set_language, get_game, set_game };
+
+
+// Benutzernamen abrufen
+const get_username = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(400).json({ message: "Benutzer-ID fehlt" });
+    }
+
+    await req.pool.query("USE ??", [process.env.DB_DATABASE]);
+
+    const [result] = await req.pool.query(
+      "SELECT username FROM users WHERE id = ?",
+      [userId]
+    );
+
+    if (result.length === 0) {
+      return res.status(404).json({ message: "Benutzer nicht gefunden" });
+    }
+
+    return res.status(200).json({ username: result[0].username });
+  } catch (error) {
+    console.error("Fehler beim Abrufen des Benutzernamens:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// Benutzernamen aktualisieren
+const set_username = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { username } = req.body;
+
+    if (!userId || !username) {
+      console.log("Fehlende Daten:", { userId, username });
+      return res.status(400).json({ message: "Benutzer-ID oder Benutzername fehlt" });
+    }
+
+    await req.pool.query("USE ??", [process.env.DB_DATABASE]);
+
+    // Überprüfen, ob der Benutzername bereits existiert
+    const [existingUser] = await req.pool.query(
+      "SELECT id FROM users WHERE username = ? AND id != ?",
+      [username, userId]
+    );
+
+    if (existingUser.length > 0) {
+      console.log("Benutzername existiert bereits:", username);
+      return res.status(400).json({ message: "Benutzername bereits vergeben" });
+    }
+
+    const [updateResult] = await req.pool.query(
+      "UPDATE users SET username = ? WHERE id = ?",
+      [username, userId]
+    );
+
+    if (updateResult.affectedRows === 0) {
+      console.log("Kein Datensatz aktualisiert");
+      return res.status(404).json({ message: "Benutzer nicht gefunden oder keine Änderungen" });
+    }
+
+    console.log("Benutzername erfolgreich aktualisiert:", username);
+    return res.status(200).json({ message: "Benutzername erfolgreich aktualisiert" });
+  } catch (error) {
+    console.error("Fehler beim Aktualisieren des Benutzernamens:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
+// Passwort aktualisieren
+const set_password = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { password } = req.body;
+
+    if (!userId || !password) {
+      return res.status(400).json({ message: "Benutzer-ID oder Passwort fehlt" });
+    }
+
+    // Passwort-Hashing mit bcrypt
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    await req.pool.query("USE ??", [process.env.DB_DATABASE]);
+
+    await req.pool.query(
+      "UPDATE users SET password = ? WHERE id = ?",
+      [hashedPassword, userId]
+    );
+
+    return res.status(200).json({ message: "Passwort erfolgreich aktualisiert" });
+  } catch (error) {
+    console.error("Fehler beim Aktualisieren des Passworts:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
+
+module.exports = { is_ready, is_admin, is_new_reg, set_new_reg, set_setup_wizard,
+                   get_language, set_language, get_game, set_game, get_seeFriends, 
+                   set_seeFriends, get_username, set_username, set_password };

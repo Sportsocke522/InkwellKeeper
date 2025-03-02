@@ -4,21 +4,43 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { FaHome, FaBookOpen, FaLayerGroup, FaUsers, FaBook } from "react-icons/fa";
 import styles from "../styles/App.module.css";
+import { Link } from "react-router-dom";
+
+
+import { Navigate, Outlet } from "react-router-dom";
+
+// Check if the user is authenticated by looking for a token in cookies
+const isAuthenticated = () => {
+  return document.cookie.split("; ").some((cookie) => cookie.startsWith("token="));
+};
+
+// Define a protected route component
+const ProtectedRoute = () => {
+  return isAuthenticated() ? <Outlet /> : <Navigate to="/login" replace />;
+};
+
 
 function SpecialPage() {
+  // Hook for programmatic navigation within the app
   const navigate = useNavigate();
+  // Tracks whether the system is ready
   const [isReady, setIsReady] = useState(null);
+  // Tracks if the user has admin privileges
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSeeFriends, setIsSeeFriends] = useState(false);
   const toastWarningMessage = useRef(false);
 
+  // Hook for handling translations in the app
   const { t } = useTranslation();
 
   useEffect(() => {
-    document.title = t("inkwell_dashboard");
+    // Set the document title dynamically using translations
+    document.title = t("dashboard") + " - " + t("inkwell");
 
+    // Fetch multiple settings from the API
     const fetchSettings = async () => {
       try {
+        // Fetch admin status, system readiness, and friends collection visibility in parallel
         const [adminRes, readyRes, seeFriendsRes] = await Promise.all([
           fetch("http://localhost:3000/settings/is_admin", { credentials: "include" }),
           fetch("http://localhost:3000/settings/is_ready", { credentials: "include" }),
@@ -27,34 +49,37 @@ function SpecialPage() {
 
         if (!adminRes.ok || !readyRes.ok || !seeFriendsRes.ok) throw new Error("API Fehler");
 
+        // Parse responses after ensuring all requests succeeded
         const [adminData, readyData, seeFriendsData] = await Promise.all([
           adminRes.json(),
           readyRes.json(),
           seeFriendsRes.json()
         ]);
 
+        // Update state based on API responses
         setIsAdmin(adminData.is_admin === 1);
         setIsReady(readyData.is_ready);
         setIsSeeFriends(seeFriendsData.seeFriendsCollection);
-
-        console.log("isAdmin erhalten:", adminData.is_admin);
-        console.log("isReady erhalten:", readyData.is_ready);
-        console.log("seeFriends erhalten:", seeFriendsData.seeFriendsCollection);
         
       } catch (error) {
-        console.error("Fehler beim Abrufen der Einstellungen:", error);
+        
       }
     };
 
+    // Call the function to fetch settings on component mount
     fetchSettings();
   }, [navigate]);
 
+
+
+  //loging out 
   const handleLogout = () => {
     document.cookie = "token=; Max-Age=0; path=/";
     toast.success(t("logout_success"));
     navigate("/login");
   };
 
+  // Navigate to the setup wizard page
   const goToSetupWizard = () => {
     navigate("/Setupwizard");
   };
@@ -71,29 +96,31 @@ function SpecialPage() {
 
         {/* Grid mit Links */}
         <div className={styles.grid}>
-          
-          <div className={styles.gridItem}>
+          <Link href="/MyCollection" className={styles.gridItem}>
             <FaBookOpen className={styles.icon} />
             <span>{t("my_collection")}</span>
-          </div>
-          <div className={styles.gridItem}>
+          </Link>
+          
+          <Link href="/decks" className={styles.gridItem}>
             <FaLayerGroup className={styles.icon} />
             <span>{t("decks")}</span>
-          </div>
+          </Link>
+
           {isSeeFriends && (
-            <div className={styles.gridItem}>
+            <Link href="/FriendsCollection" className={styles.gridItem}>
               <FaUsers className={styles.icon} />
               <span>{t("friends_collection")}</span>
-            </div>
+            </Link>
           )}
-          <div className={styles.gridItem}>
+
+          <Link href="/catalog" className={styles.gridItem}>
             <FaBook className={styles.icon} />
             <span>{t("catalog")}</span>
-          </div>
+          </Link>
         </div>
       </div>
 
-      {/* Popup wird angezeigt, wenn !isReady && isAdmin */}
+      {/* Display a popup if the system is not ready but the user is an admin */}
       {!isReady && isAdmin && (
         <div className={styles.popupOverlay}>
           <div className={styles.popup}>

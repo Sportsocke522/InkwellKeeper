@@ -16,7 +16,8 @@ const { is_ready,
         set_seeFriends,
         get_username,
         set_username,
-        set_password
+        set_password,
+        downloadCardData
     } = require("../controllers/SettingsControllers")
 const authenticateToken = require("../middleware/authenticateToken"); // Middleware importieren
 
@@ -42,6 +43,8 @@ router.post("/set_setup_wizard", authenticateToken, set_setup_wizard )
 router.get("/get_username", authenticateToken, get_username);
 router.post("/set_username", authenticateToken, set_username);
 router.post("/set_password", authenticateToken, set_password);
+
+router.post("/update_card_data", authenticateToken, downloadCardData);
 
 
 //exporting the routes here

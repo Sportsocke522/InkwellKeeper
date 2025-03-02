@@ -23,9 +23,10 @@ function DeckListPage() {
   const { t } = useTranslation();
 
   useEffect(() => {
-    document.title = t("deck_list");
+    // Set the document title dynamically using translations
+    document.title = t("deck_list") + " - " + t("inkwell");
 
-    // Benutzerstatus abrufen
+    // Fetch user admin status from the API
     const fetchUserStatus = async () => {
       try {
         const response = await fetch("http://localhost:3000/settings/is_admin", {
@@ -39,17 +40,21 @@ function DeckListPage() {
         }
 
         const data = await response.json();
+        // Update state based on admin status
         setIsAdmin(data.is_admin === 1);
       } catch (error) {
-        console.error("Error fetching user status:", error);
+        
       }
     };
-
+    // Fetch user admin status when the component mounts
     fetchUserStatus();
+    // Fetch the list of decks when the component mounts
     fetchDecks();
   }, []);
 
-  // Decks abrufen
+
+
+  // Fetch the list of decks from the API
   const fetchDecks = async () => {
     try {
       const response = await fetch("http://localhost:3000/cards/decks", {
@@ -63,16 +68,16 @@ function DeckListPage() {
       }
   
       const data = await response.json();
-      console.log("Received decks:", data);  // Debugging
-      setDecks(data.decks || []);  // Sicherstellen, dass ein Array gesetzt wird
+      
+      setDecks(data.decks || []);  // Ensure that state is always an array
     } catch (error) {
-      console.error("Error fetching decks:", error);
-      setDecks([]);  // Fallback auf leeres Array bei Fehlern
+      
+      setDecks([]);  // Fallback to an empty array in case of an error
     }
   };
   
 
-  // Deck erstellen
+  // Create a new deck
   const createDeck = async () => {
     try {
       const response = await fetch("http://localhost:3000/cards/decks/create", {
@@ -89,11 +94,14 @@ function DeckListPage() {
         throw new Error("Failed to create deck");
       }
 
+      // Show success notification
       toast.success(t("deck_created"));
+      // Close the deck creation popup
       setShowPopup(false);
+      // Refresh the deck list to include the newly created deck
       fetchDecks();
     } catch (error) {
-      console.error("Error creating deck:", error);
+      // Show error notification
       toast.error(t("deck_creation_failed"));
     }
   };
@@ -101,7 +109,7 @@ function DeckListPage() {
   return (
       <div className={styles.container}>
         <div className={styles.contentWrapper}>
-          <h1 className={styles.dashboardTitle}>{t("deck_list_title")}</h1>
+          <h1 className={styles.dashboardTitle}>{t("deck_list")}</h1>
 
           <div className={styles.cartContainer}>
 
@@ -128,7 +136,11 @@ function DeckListPage() {
                   </div>
                 ))
               ) : (
-                <p>{t("no_decks_found")}</p>
+                <>
+                  {/*
+                    <p>{t("no_decks_found")}</p>
+                  */}
+                </>
               )}
 
               <div className={`${styles.card} ${styles.addDeck}`} onClick={() => setShowPopup(true)}>

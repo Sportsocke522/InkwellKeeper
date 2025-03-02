@@ -114,15 +114,15 @@ const get_all_cards = async (req, res) => {
                 c.id, 
                 c.set_code, 
                 c.number, 
-                c.name, 
-                c.full_name, 
+                COALESCE(ct.name, c.name) AS name,
+                COALESCE(ct.full_name, c.full_name) AS full_name,
                 c.type, 
                 c.color, 
                 c.cost, 
                 c.strength, 
                 c.willpower, 
                 c.rarity, 
-                c.story, 
+                COALESCE(ct.story, c.story) AS story,
                 c.inkwell,
                 COALESCE(ct.language, 'en') AS language,
                 COALESCE(ct.flavor_text, '') AS flavor_text,
@@ -142,7 +142,14 @@ const get_all_cards = async (req, res) => {
                 (? = '' OR c.set_code = ?)
                 AND (? = '' OR c.color = ?)
                 AND (? = '' OR c.rarity = ?)
-                AND (? = '' OR c.name LIKE ? OR c.full_name LIKE ? OR ct.full_text LIKE ?)
+                AND (? = '' 
+                    OR c.name LIKE ? 
+                    OR c.full_name LIKE ? 
+                    OR c.story LIKE ?
+                    OR ct.name LIKE ?
+                    OR ct.full_name LIKE ?
+                    OR ct.story LIKE ?
+                    OR ct.full_text LIKE ?)
             ORDER BY 
                 ${sortField} ${sortOrder};
         `;
@@ -157,6 +164,10 @@ const get_all_cards = async (req, res) => {
             rarity || '',
             rarity || '',
             search || '',
+            `%${search || ''}%`,
+            `%${search || ''}%`,
+            `%${search || ''}%`,
+            `%${search || ''}%`,
             `%${search || ''}%`,
             `%${search || ''}%`,
             `%${search || ''}%`,
@@ -200,6 +211,7 @@ const get_all_cards = async (req, res) => {
         return res.status(500).json({ message: "Internal Server Error" });
     }
 };
+
 
   const add_card_to_collection = async (req, res) => {
     try {

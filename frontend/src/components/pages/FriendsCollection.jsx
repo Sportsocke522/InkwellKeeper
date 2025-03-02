@@ -22,18 +22,22 @@ function FriendsCollection() {
   const [userList, setUserList] = useState([]);
   const [selectedUser, setSelectedUser] = useState("all");
 
-  const [selectedCard, setSelectedCard] = useState(null); // Für das Popup
-  const [ownedQuantity, setOwnedQuantity] = useState(0); // Für normale Karten
-  const [foilQuantity, setFoilQuantity] = useState(0); // Für Foilkarten
+  const [selectedCard, setSelectedCard] = useState(null); 
+  const [ownedQuantity, setOwnedQuantity] = useState(0); 
+  const [foilQuantity, setFoilQuantity] = useState(0); 
 
   useEffect(() => {
-    document.title = t("friends_collection_title");
+    // Set the document title dynamically using translations
+    document.title = t("friends_collection_title") + " - " + t("inkwell");
 
-    fetchUserList();
-    fetchCards();
+    fetchUserList(); // Fetch the list of friends
+    fetchCards(); // Fetch the collection of selected friends
+
+    // Re-fetch data when filters or sorting options change
   }, [selectedUser, selectedColor, selectedRarity, selectedSet, debouncedSearchQuery, sortBy, sortOrder]);
 
   useEffect(() => {
+    // Debounce search query to reduce API calls while typing
     const handler = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
     }, 500);
@@ -42,6 +46,7 @@ function FriendsCollection() {
 
   const fetchUserList = async () => {
     try {
+      // Send a GET request to retrieve the list of friends
       const response = await fetch("http://localhost:3000/cards/users/friends", {
         method: "GET",
         credentials: "include",
@@ -50,17 +55,20 @@ function FriendsCollection() {
       if (!response.ok) throw new Error("Failed to fetch user list");
   
       const data = await response.json();
-      console.log("Fetched user list:", data);  // Debugging-Ausgabe
+
+      // Update the user list or set an empty array if none exist
       setUserList(data.users || []);
     } catch (error) {
-      console.error("Error fetching user list:", error);
+      
     }
   };
   
 
   const fetchCards = async () => {
+    // Set loading state before fetching data
     setIsLoading(true);
     try {
+      // Construct query parameters based on selected filters and user selection
       const queryParams = new URLSearchParams({
         set_code: selectedSet || "",
         color: selectedColor || "",
@@ -71,41 +79,41 @@ function FriendsCollection() {
         friend_id: selectedUser !== "all" ? selectedUser : "",
       }).toString();
   
-      console.log("API Request URL:", `http://localhost:3000/cards/collection/friends/filtered?${queryParams}`);
-  
+      // Fetch filtered cards from the API
       const response = await fetch(`http://localhost:3000/cards/collection/friends/filtered?${queryParams}`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
       });
   
-      console.log("API Response Status:", response.status);
-  
       if (!response.ok) {
         const errorResponse = await response.json();
-        console.error("API Error Response:", errorResponse);
+        
         throw new Error("Failed to fetch filtered cards");
       }
   
       const data = await response.json();
-      console.log("Fetched cards data:", data);
-  
+      
+      // Update state with fetched cards or fallback to an empty array
       setCards(data.cards || []);
     } catch (error) {
-      console.error("Error fetching cards:", error);
+      // Handle errors (e.g., API request failure)
       setCards([]);
     } finally {
+      // End loading state
       setIsLoading(false);
     }
   };
   
 
   const handleSortChange = (e) => {
+    // Extract sorting field and order from the selected option
     const [field, order] = e.target.value.split("-");
     setSortBy(field);
     setSortOrder(order);
   };
 
+  // Reset all filters to default values
   const resetFilters = () => {
     setSearchQuery("");
     setSelectedColor("");
@@ -115,12 +123,15 @@ function FriendsCollection() {
     fetchCards();
   };
 
+  // Close the popup by clearing the selected card
   const closePopup = () => setSelectedCard(null);
 
   const openPopup = async (card) => {
+    // Set the selected card to display in the popup
     setSelectedCard(card);
 
     try {
+      // Fetch the quantity of the selected card from the user's collection
       const response = await fetch(`http://localhost:3000/cards/collection/quantity/${card.id}`, {
         method: "GET",
         headers: {
@@ -134,10 +145,12 @@ function FriendsCollection() {
       }
 
       const data = await response.json();
+
+      // Ensure the retrieved quantities are numbers and update state
       setOwnedQuantity(Number(data.normal_quantity || 0));
       setFoilQuantity(Number(data.foil_quantity || 0));
     } catch (error) {
-      console.error("Error fetching card quantity:", error);
+      // Handle errors by resetting quantities to 0
       setOwnedQuantity(0);
       setFoilQuantity(0);
     }

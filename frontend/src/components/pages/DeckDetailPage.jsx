@@ -23,33 +23,33 @@ function DeckDetailPage() {
   const [availableCards, setAvailableCards] = useState([]);
 
   useEffect(() => {
-    document.title = t("deck_details");
+    // Set the document title dynamically using translations
+    document.title = t("deck_details") + " - " + t("inkwell");
+    // Fetch deck details when the component mounts
     fetchDeckDetails();
   }, []);
 
   const fetchDeckDetails = async () => {
     try {
-      console.log("Fetching deck details...");
+      // Send a GET request to fetch deck details based on the deck ID
       const response = await fetch(`http://localhost:3000/cards/decks/${deckId}`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
       });
 
-      console.log("Response status:", response.status);
-
       if (!response.ok) throw new Error("Failed to fetch deck details");
 
       const data = await response.json();
-      console.log("Deck data received:", data);
 
+       // Update state with deck details or fallback values if data is missing
       setDeck(data.deck || {});
       setDeckName(data.deck?.name || "");
       setDeckDescription(data.deck?.description || "");
       setDeckImage(data.deck?.image_path || placeholder);
       setDeckCards(data.deck?.cards || []);
     } catch (error) {
-      console.error("Error fetching deck details:", error);
+
     }
   };
 
@@ -57,6 +57,7 @@ function DeckDetailPage() {
 
   const fetchOwnedCards = async () => {
     try {
+      // Send a GET request to retrieve the user's card collection
       const response = await fetch(`http://localhost:3000/cards/collection`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
@@ -66,8 +67,8 @@ function DeckDetailPage() {
       if (!response.ok) throw new Error("Failed to fetch owned cards");
 
       const data = await response.json();
-      console.log("Owned cards data received:", data);
 
+      // Transform the API response into the expected structure
       const transformedCards = data.cards.map((card) => ({
         user_collection_id: card.user_collection_id,
         full_name: card.full_name,
@@ -75,17 +76,15 @@ function DeckDetailPage() {
         is_foil: card.is_foild || 0,
       }));
       
-
+      // Update state with the transformed card data
       setAvailableCards(transformedCards || []);
-      console.log("Transfromd: ");
-      console.log(transformedCards);
     } catch (error) {
-      console.error("Error fetching owned cards:", error);
     }
   };
 
   const updateDeckDetails = async () => {
     try {
+      // Send a PUT request to update the deck details
       await fetch(`http://localhost:3000/cards/decks/${deckId}/update`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -96,15 +95,17 @@ function DeckDetailPage() {
         }),
       });
 
+      // Show a success notification
       toast.success(t("deck_updated"));
+      // Refresh the deck details after updating
       fetchDeckDetails();
     } catch (error) {
-      console.error("Error updating deck:", error);
     }
   };
 
   const setDeckCoverImage = async (imagePath) => {
     try {
+      // Send a PUT request to update the deck's cover image
       await fetch(`http://localhost:3000/cards/decks/${deckId}/set_image`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -112,14 +113,16 @@ function DeckDetailPage() {
         body: JSON.stringify({ image_path: imagePath }),
       });
 
+      // Show a success notification
       toast.success(t("deck_image_updated"));
+      // Refresh the deck details to reflect the updated image
       fetchDeckDetails();
     } catch (error) {
-      console.error("Error updating deck image:", error);
+      
     }
   };
 
-
+//handle editing State
   const handleEditToggle = () => {
     if (isEditing) {
       updateDeckDetails();
@@ -130,13 +133,16 @@ function DeckDetailPage() {
   const handleCardSelection = (userCollectionId) => {
     setSelectedCards((prev) => {
       if (prev.includes(userCollectionId)) {
+        // If the card is already selected, remove it from the selection
         return prev.filter((id) => id !== userCollectionId);
       }
+       // Otherwise, add the card to the selection (ensuring unique values)
       return [...new Set([...prev, userCollectionId])];
     });
   };
   
-
+  // Filter available cards to exclude those that are already in the deck
+  // This ensures that only cards not present in the deck are selectable
   const filteredAvailableCards = availableCards.filter(
     (card) => !deckCards.some((deckCard) => deckCard.user_collection_id === card.user_collection_id)
   );
@@ -144,6 +150,7 @@ function DeckDetailPage() {
 
   const addCardsToDeck = async () => {
     try {
+      // Send a POST request to add selected cards to the deck
       await fetch(`http://localhost:3000/cards/decks/${deckId}/add_card`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -151,20 +158,25 @@ function DeckDetailPage() {
         body: JSON.stringify({ user_collection_ids: selectedCards }),
       });
 
+      // Show a success notification
       toast.success(t("cards_added"));
 
+      // Clear the selected cards after adding them
       setSelectedCards([]);
 
-      
+      // Close the "Add Cards" popup
       setShowAddCardsPopup(false);
+
+      // Refresh the deck details to reflect the new cards
       fetchDeckDetails();
     } catch (error) {
-      console.error("Error adding cards to deck:", error);
+      
     }
   };
 
   const removeCardFromDeck = async (userCollectionId) => {
     try {
+      // Send a DELETE request to remove a specific card from the deck
       const response = await fetch(`http://localhost:3000/cards/decks/${deckId}/remove_card`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
@@ -175,9 +187,10 @@ function DeckDetailPage() {
       if (!response.ok) throw new Error("Failed to remove card from deck");
 
       toast.success(t("card_removed"));
+      // Refresh the deck details to reflect the removal
       fetchDeckDetails();
     } catch (error) {
-      console.error("Error removing card from deck:", error);
+      
     }
   };
 
@@ -185,7 +198,7 @@ function DeckDetailPage() {
 
     <div className={styles.container}>
       <div className={styles.contentWrapper}>
-        <h1 className={styles.dashboardTitle}>{t("deck_details_title")}</h1>
+        <h1 className={styles.dashboardTitle}>{t("deck_details")}</h1>
 
           {deck === null ? (
             <p>{t("loading_message")}</p>
@@ -194,7 +207,7 @@ function DeckDetailPage() {
             <div className={styles.deckInfoContainer}>
               <div className={styles.deckHeader}>
                 <div className={styles.deckHeaderImg}>
-                  <img src={deckImage} alt="Deck Cover" className={styles.deckImage} />
+                  <img src={deckImage} alt={`t("deck_cover_alt")`} className={styles.deckImage} />
                     {isEditing && (
                       <button className={`${styles.btn} ${styles["btn-danger"]}`} onClick={() => setDeckCoverImage("")}>
                         {t("reset_cover")}
@@ -323,4 +336,4 @@ function DeckDetailPage() {
 }
 
 export default DeckDetailPage;
-//ok
+

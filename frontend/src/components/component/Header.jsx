@@ -1,17 +1,21 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import NavigationMenu from "./NavigationMenu";
 import UserMenu from "./UserMenu";
 import styles from "../styles/App.module.css";
 import { FaBars, FaTimes } from "react-icons/fa";
-
+import { useTranslation } from "react-i18next";
 import logo from "../styles/images/logo.png";
 
 const Header = () => {
+  const location = useLocation();
   const [username, setUsername] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 1100);
   const menuRef = useRef(null);
+  const { t } = useTranslation();
+
+ 
 
   useEffect(() => {
     const fetchUsername = async () => {
@@ -64,6 +68,8 @@ const Header = () => {
     setMenuOpen(!menuOpen);
   };
 
+ 
+
   return (
     <>
       <header className={styles.header}>
@@ -77,7 +83,7 @@ const Header = () => {
           </div>
           <div className={styles.middelSection}>
             <Link to="/" className={styles.logo}>
-                <img src={logo} alt="Logo" />
+                <img src={logo} alt={`${t("inkwell")} ${t("logo")}`} />
             </Link>
           </div>
           <div className={styles.rightSection}>

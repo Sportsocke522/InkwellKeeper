@@ -1,15 +1,22 @@
 import { useEffect, useState } from "react";
-import styles from "../styles/Catalog.module.css";
+import styles from "../styles/App.module.css";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+//Placeholder Img 
+import placeholder from "../styles/images/card_placeholder.png";
+
 function CatalogPage() {
+  // Initialize hooks for navigation and translations
   const navigate = useNavigate();
   const { t } = useTranslation();
 
+  // Define state variables for app status and user permissions
   const [isReady, setIsReady] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+
+  // State for card-related data and filters
   const [cards, setCards] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -21,66 +28,82 @@ function CatalogPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [friendsCards, setFriendsCards] = useState([]);
 
+  // State for selected card details
+  const [selectedCard, setSelectedCard] = useState(null); 
+  const [ownedQuantity, setOwnedQuantity] = useState(0); 
+  const [foilQuantity, setFoilQuantity] = useState(0); 
 
-  const [selectedCard, setSelectedCard] = useState(null); // Für das Popup
-  const [ownedQuantity, setOwnedQuantity] = useState(0); // Für normale Karten
-  const [foilQuantity, setFoilQuantity] = useState(0); // Für Foilkarten
-
+  // State for tracking owned cards as sets (normal and foil)
   const [ownedCards, setOwnedCards] = useState({
     normal: new Set(),
     foil: new Set(),
   });
 
-const incrementOwned = () => setOwnedQuantity((prev) => prev + 1);
-const decrementOwned = () => setOwnedQuantity((prev) => Math.max(prev - 1, 0));
-const incrementFoil = () => setFoilQuantity((prev) => prev + 1);
-const decrementFoil = () => setFoilQuantity((prev) => Math.max(prev - 1, 0));
+  // Functions to modify the quantity of owned normal cards
+  const incrementOwned = () => setOwnedQuantity((prev) => prev + 1);
+  const decrementOwned = () => setOwnedQuantity((prev) => Math.max(prev - 1, 0));
+
+  // Functions to modify the quantity of owned foil cards
+  const incrementFoil = () => setFoilQuantity((prev) => prev + 1);
+  const decrementFoil = () => setFoilQuantity((prev) => Math.max(prev - 1, 0));
 
 
-const fetchCards = async () => {
-  setIsLoading(true);
-  try {
+  /* 
+    Fetch filtered cards from the API based on selected filters
+  */
+  const fetchCards = async () => {
+
+    // Set loading state before fetching data
+    setIsLoading(true);
+    try {
+      // Construct query parameters based on filters and search inpu
       const queryParams = new URLSearchParams({
-          set_code: selectedSet || "",
-          color: selectedColor || "",
-          rarity: selectedRarity || "",
-          search: debouncedSearchQuery || "",
-          sort_by: sortBy,
-          sort_order: sortOrder,
+        set_code: selectedSet || "",
+        color: selectedColor || "",
+        rarity: selectedRarity || "",
+        search: debouncedSearchQuery || "",
+        sort_by: sortBy,
+        sort_order: sortOrder,
       }).toString();
 
+      // Fetch data from the API with the constructed query parameters
       const response = await fetch(`http://localhost:3000/cards/filtered?${queryParams}`, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
       });
 
-      if (!response.ok) throw new Error("Failed to fetch filtered cards");
+      if (!response.ok) throw new Error("Failed to fetch filtered cards"); // Handle HTTP errors
 
       const data = await response.json();
 
-      // Duplikate basierend auf der Karten-ID entfernen
+      // Remove duplicate cards based on their ID
       const uniqueCards = data.cards.reduce((acc, card) => {
-          if (!acc.find((c) => c.id === card.id)) {
-              acc.push(card);
-          }
-          return acc;
+        if (!acc.find((c) => c.id === card.id)) {
+          acc.push(card);
+        }
+        return acc;
       }, []);
 
+      // Update state with the fetched cards or set an empty array if none exist
       setCards(uniqueCards.length ? uniqueCards : []);
-  } catch (error) {
-      console.error("Error fetching cards:", error);
+
+    } catch (error) {
+      // Handle API errors by setting an empty card list
       setCards([]);
-  } finally {
+    } finally {
+      // End loading state
       setIsLoading(false);
-  }
-};
+    }
+  };
 
 
+  /*
+    Fetch the user's owned cards from the API
+  */
   const fetchOwnedCards = async () => {
     try {
-      //console.log("Fetching owned cards...");
-  
+      // Send a GET request to retrieve owned cards
       const response = await fetch(`http://localhost:3000/cards/collection`, {
         method: "GET",
         headers: {
@@ -89,159 +112,164 @@ const fetchCards = async () => {
         credentials: "include",
       });
   
-      //console.log("Response status:", response.status);
-  
       if (!response.ok) {
-        throw new Error("Failed to fetch owned cards");
+        throw new Error("Failed to fetch owned cards"); // Handle HTTP errors
       }
   
-      const data = await response.json();
-      //console.log("Fetched data:", data);
+      const data = await response.json(); // Parse response data
   
-      // Sicherstellen, dass Daten existieren und korrekt verarbeitet werden
-      if (data.cards) {
-        //console.log("Processing cards...");
+      
+      if (data.cards) { // Ensure valid card data exists
   
         const ownedNormal = new Set();
         const ownedFoil = new Set();
   
+        // Iterate through the fetched cards and categorize them
         data.cards.forEach((card) => {
-            //console.log("Processing card:", card);
-  
-            // Korrektur: Ändere card.card_id zu card.id
-            const cardId = Number(card.id); // Konvertiere in Zahl für Konsistenz
-            
-            //console.log(`Processed card ID: ${cardId}, Is foil: ${card.is_foil}`);
           
-            if (card.is_foil) {
-              ownedFoil.add(cardId);
-            } else {
-              ownedNormal.add(cardId);
-            }
+          const cardId = Number(card.id); // Konvertiere in Zahl für Konsistenz
+            
+          if (card.is_foil) {
+            ownedFoil.add(cardId); // Add foil card to foil set
+          } else {
+            ownedNormal.add(cardId); // Add normal card to normal set
+          }
         });
   
-        //console.log("Owned normal cards:", Array.from(ownedNormal));
-        //console.log("Owned foil cards:", Array.from(ownedFoil));
-  
-        // Zustand mit den neuen Sets aktualisieren
+        // Update state with the categorized owned cards
         setOwnedCards({
           normal: ownedNormal,
           foil: ownedFoil,
         });
   
 
- 
-
-
-
-        //console.log("State updated with owned cards.");
       } else {
-        console.warn("No cards found in response.");
+        
       }
     } catch (error) {
-      console.error("Error fetching owned cards:", error);
+      
     }
   };
   
-  
+  /*
+    Fetch the collection of friends' owned cards from the API
+  */
   const fetchFriendsCards = async () => {
     try {
-        const response = await fetch("http://localhost:3000/cards/collection/friends", {
-            method: "GET",
-            credentials: "include",
-        });
+      // Send a GET request to retrieve friends' card collections
+      const response = await fetch("http://localhost:3000/cards/collection/friends", {
+        method: "GET",
+        credentials: "include",
+      });
 
-        if (!response.ok) throw new Error("Failed to fetch friends' cards");
-
-        const data = await response.json();
-
-        if (!data.cards || data.cards.length === 0) {
-          console.warn("No friend cards found.");
-        } else {
-            console.log("Fetched friends' cards:", data.cards);
-        }
-
-        setFriendsCards(data.cards || []);
-    } catch (error) {
-        console.error("Error fetching friends' cards:", error);
-    }
-};
+      if (!response.ok) throw new Error("Failed to fetch friends' cards"); // Handle HTTP errors
 
 
+      const data = await response.json();
 
-
-useEffect(() => {
-  document.title = t("catalog_title");
-
-  const fetchStatus = async () => {
-      try {
-          const [adminResponse, readyResponse] = await Promise.all([
-              fetch("http://localhost:3000/settings/is_admin", {
-                  method: "GET",
-                  headers: { "Content-Type": "application/json" },
-                  credentials: "include",
-              }),
-              fetch("http://localhost:3000/settings/is_ready", {
-                  method: "GET",
-                  headers: { "Content-Type": "application/json" },
-                  credentials: "include",
-              }),
-          ]);
-
-          if (!adminResponse.ok || !readyResponse.ok) {
-              throw new Error("Failed to fetch status");
-          }
-
-          const adminData = await adminResponse.json();
-          const readyData = await readyResponse.json();
-
-          setIsAdmin(adminData.is_admin === 1);
-          setIsReady(readyData.is_ready);
-      } catch (error) {
-          console.error("Error fetching status:", error);
+      // Update state with friends' cards or set an empty array if none exist
+      if (!data.cards || data.cards.length === 0) {
+          
+      } else {
+            
       }
+
+      setFriendsCards(data.cards || []);
+    } catch (error) {
+        
+    }
   };
 
-  fetchStatus();
-  fetchCards();
-  fetchOwnedCards();
 
-  const checkSeeFriends = async () => {
+
+
+  useEffect(() => {
+    // Set the document title using translations
+    document.title = t("catalog_title") + " - " + t("inkwell");
+
+    /*
+      Fetch user status (admin rights and system readiness)
+    */
+    const fetchStatus = async () => {
+      try {
+        // Fetch both admin status and system readiness in parallel
+        const [adminResponse, readyResponse] = await Promise.all([
+          fetch("http://localhost:3000/settings/is_admin", {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+          }),
+          fetch("http://localhost:3000/settings/is_ready", {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+          }),
+        ]);
+
+        if (!adminResponse.ok || !readyResponse.ok) {
+          throw new Error("Failed to fetch status"); // Handle HTTP errors
+        }
+
+        // Parse responses
+        const adminData = await adminResponse.json();
+        const readyData = await readyResponse.json();
+
+        // Update state based on the responses
+        setIsAdmin(adminData.is_admin === 1);
+        setIsReady(readyData.is_ready);
+
+      } catch (error) {
+          
+      }
+    };
+
+    // Call functions to fetch initial data
+    fetchStatus();
+    fetchCards();
+    fetchOwnedCards();
+
+    /**
+     * Check if the user has enabled the "see friends' collection" setting
+     */
+    const checkSeeFriends = async () => {
       const response = await fetch("http://localhost:3000/settings/get_seeFriends", {
-          method: "GET",
-          credentials: "include",
+        method: "GET",
+        credentials: "include",
       });
       const data = await response.json();
       if (data.seeFriendsCollection === "true") {
-          fetchFriendsCards();
+        fetchFriendsCards(); // Fetch friends' card collections if enabled
       }
-  };
+    };
 
-  checkSeeFriends();
-}, []);
+    checkSeeFriends();
+  }, []); // Runs only once when the component mounts
 
 
   useEffect(() => {
+    // Debounce the search query to reduce the number of API calls
     const handler = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
-    }, 500);
+    }, 500); // Waits 500ms before updating the debounced query
 
     return () => clearTimeout(handler);
-  }, [searchQuery]);
+  }, [searchQuery]); // Runs whenever searchQuery changes
 
   useEffect(() => {
-    fetchCards();
-  }, [selectedColor, selectedRarity, selectedSet, debouncedSearchQuery,  sortBy, sortOrder]);
+    fetchCards(); // Fetch updated card list when filters or sorting options change
+  }, [selectedColor, selectedRarity, selectedSet, debouncedSearchQuery,  sortBy, sortOrder]); // Runs when any dependency changes
 
 
   const handleSortChange = (e) => {
+    // Runs when any dependency changes
     const [field, order] = e.target.value.split("-");
-    setSortBy(field);
-    setSortOrder(order);
+    setSortBy(field); // Update sorting field
+    setSortOrder(order); // Update sorting order
   };
 
 
   const resetFilters = () => {
+    // Reset all filters and fetch all cards again
     setSearchQuery("");
     setSelectedColor("");
     setSelectedRarity("");
@@ -250,11 +278,13 @@ useEffect(() => {
   };
 
   const closePopup = () => setSelectedCard(null);
+  // Closes the card details popup by resetting the selected card
 
   const openPopup = async (card) => {
-    setSelectedCard(card);
+    setSelectedCard(card); // Sets the selected card to display in the popup
   
     try {
+      // Fetch the quantity of the selected card from the user's collection
       const response = await fetch(`http://localhost:3000/cards/collection/quantity/${card.id}`, {
         method: "GET",
         headers: {
@@ -269,86 +299,87 @@ useEffect(() => {
   
       const data = await response.json();
       
-      // Sicherstellen, dass Zahlen gespeichert werden
+      // Ensure the retrieved quantities are numbers and update state
       setOwnedQuantity(Number(data.normal_quantity || 0));
       setFoilQuantity(Number(data.foil_quantity || 0));
     } catch (error) {
-      console.error("Error fetching card quantity:", error);
+      // Handle errors by resetting quantities to 0
       setOwnedQuantity(0);
       setFoilQuantity(0);
     }
   };
   
   
-  
-  
   const saveCardQuantity = async (cardId, normalQuantity, foilQuantity, setLocalQuantity, oldQuantity) => {
     try {
-        console.log("Sending data to API:", { card_id: cardId, normal_quantity: normalQuantity, foil_quantity: foilQuantity });
-        setIsLoading(true);
+      setIsLoading(true); // Set loading state while saving data
 
-        const response = await fetch(`http://localhost:3000/cards/collection/add`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            credentials: "include",
-            body: JSON.stringify({
-                card_id: cardId,
-                normal_quantity: normalQuantity,
-                foil_quantity: foilQuantity,
-            }),
-        });
+      // Send a request to update the owned card quantities
+      const response = await fetch(`http://localhost:3000/cards/collection/add`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          card_id: cardId,
+          normal_quantity: normalQuantity, // The new quantity of normal cards
+          foil_quantity: foilQuantity, // The new quantity of foil cards
+        }),
+      });
 
-        const result = await response.json();
+      const result = await response.json();
 
-        if (!response.ok) {
-            switch (result.code) {
-                case "CARD_IN_DECK":
-                    toast.error(t("error_card_in_deck"));  // Übersetzung des Fehlers
-                    break;
-                case "USER_ID_MISSING":
-                    toast.error(t("error_user_id_missing"));
-                    break;
-                case "CARD_ID_MISSING":
-                    toast.error(t("error_card_id_missing"));
-                    break;
-                default:
-                    toast.error(t("error_generic"));
-            }
-            throw new Error(result.code);
+      if (!response.ok) {
+        // Handle specific API error responses with user feedback
+        switch (result.code) {
+          case "CARD_IN_DECK":
+            toast.error(t("error_card_in_deck"));  // Übersetzung des Fehlers
+            break;
+          case "USER_ID_MISSING":
+            toast.error(t("error_user_id_missing"));
+            break;
+          case "CARD_ID_MISSING":
+            toast.error(t("error_card_id_missing"));
+            break;
+          default:
+            toast.error(t("error_generic"));
         }
+        throw new Error(result.code);
+      }
 
-        toast.success(t("success_update"));
-        fetchOwnedCards();
+      toast.success(t("success_update"));
+      fetchOwnedCards(); // Refresh the owned cards list after successful update
+
     } catch (error) {
-        console.error("Error saving card quantity:", error.message);
-        //toast.error(t("error_generic"));
-        setLocalQuantity(oldQuantity); // Setze den Wert auf den alten Zustand zurück
+      // If an error occurs, revert the local UI state to the previous value
+        setLocalQuantity(oldQuantity); 
     } finally {
         setIsLoading(false);
     }
-};
+  };
 
-// Normale Karten aktualisieren
-const updateOwnedQuantity = async (change) => {
-    const oldQuantity = ownedQuantity; // Speichere den aktuellen Wert
-    const newQuantity = Math.max(Number(ownedQuantity) + change, 0);
+  // Update the quantity of normal cards
+  const updateOwnedQuantity = async (change) => {
+    const oldQuantity = ownedQuantity; // Store the current value before updating
+    const newQuantity = Math.max(Number(ownedQuantity) + change, 0); // Ensure quantity doesn't go below zero
 
-    setOwnedQuantity(newQuantity);  // UI sofort aktualisieren
+    setOwnedQuantity(newQuantity);  // Update UI immediately
 
+    // Save the new quantity to the backend
     await saveCardQuantity(selectedCard.id, newQuantity, foilQuantity, setOwnedQuantity, oldQuantity);
-};
+  };
 
-// Foil-Karten aktualisieren
-const updateFoilQuantity = async (change) => {
-    const oldQuantity = foilQuantity; // Speichere den aktuellen Wert
-    const newQuantity = Math.max(Number(foilQuantity) + change, 0);
+  // Update the quantity of foil cards
+  const updateFoilQuantity = async (change) => {
+    const oldQuantity = foilQuantity; // Store the current value before updating
+    const newQuantity = Math.max(Number(foilQuantity) + change, 0); // Ensure quantity doesn't go below zero
 
-    setFoilQuantity(newQuantity);  // UI sofort aktualisieren
+    setFoilQuantity(newQuantity);  // Update UI immediately
 
+    // Save the new quantity to the backend
     await saveCardQuantity(selectedCard.id, ownedQuantity, newQuantity, setFoilQuantity, oldQuantity);
-};
+  };
 
 
   
@@ -356,161 +387,190 @@ const updateFoilQuantity = async (change) => {
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h1>{t("catalog_title")}</h1>
-      </div>
-      <div className={styles.searchFilterContainer}>
-        <input
-          type="text"
-          placeholder={t("search_placeholder")}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className={styles.searchInput}
-        />
-        <div className={styles.filterContainer}>
-          <select
-            className={styles.filterSelect}
-            value={selectedColor}
-            onChange={(e) => setSelectedColor(e.target.value)}
-          >
-            <option value="">{t("select_color")}</option>
-            <option value="Amber">{t("color_amber")}</option>
-            <option value="Amethyst">{t("color_amethyst")}</option>
-            <option value="Emerald">{t("color_emerald")}</option>
-            <option value="Ruby">{t("color_ruby")}</option>
-            <option value="Sapphire">{t("color_sapphire")}</option>
-            <option value="Steel">{t("color_steel")}</option>
-          </select>
-          <select
-            className={styles.filterSelect}
-            value={selectedRarity}
-            onChange={(e) => setSelectedRarity(e.target.value)}
-          >
-            <option value="">{t("select_rarity")}</option>
-            <option value="Common">{t("rarity_common")}</option>
-            <option value="Uncommon">{t("rarity_uncommon")}</option>
-            <option value="Rare">{t("rarity_rare")}</option>
-            <option value="Super Rare">{t("rarity_super_rare")}</option>
-            <option value="Legendary">{t("rarity_legendary")}</option>
-            <option value="Enchanted">{t("rarity_enchanted")}</option>
-            <option value="Special">{t("rarity_special")}</option>
-          </select>
-          <select
-            className={styles.filterSelect}
-            value={selectedSet}
-            onChange={(e) => setSelectedSet(e.target.value)}
-          >
-            <option value="">{t("select_set")}</option>
-            <option value="1">{t("set_1")}</option>
-            <option value="2">{t("set_2")}</option>
-            <option value="3">{t("set_3")}</option>
-            <option value="4">{t("set_4")}</option>
-            <option value="5">{t("set_5")}</option>
-            <option value="6">{t("set_6")}</option>
-            <option value="7">{t("set_7")}</option>
-          </select>
-          <button onClick={resetFilters} className={styles.resetButton}>
-            {t("reset_filters")}
-          </button>
-        </div>
-      </div>
+      <div className={styles.contentWrapper}>
+        <h1 className={styles.dashboardTitle}>{t("catalog_title")}</h1>
 
+        <div className={styles.searchFilterContainer}>
 
-      <div className={styles.sortContainer}>
-        <label>{t("sort_by")}:</label>
-        <select value={`${sortBy}-${sortOrder}`} onChange={handleSortChange} className={styles.sortSelect}>
-          <option value="id-ASC">{t("sort_id_asc")}</option>
-          <option value="id-DESC">{t("sort_id_desc")}</option>
-          <option value="cost-ASC">{t("sort_cost_asc")}</option>
-          <option value="cost-DESC">{t("sort_cost_desc")}</option>
-        </select>
-      </div>
-
-
-      <div className={styles.cardGrid}>
-        {isLoading ? (
-            <p>{t("loading_message")}</p>
-        ) : cards.length > 0 ? (
-            cards.map((card) => {
-            //console.log("Checking card:", card.id, Number(card.id));
-            //console.log("Normal set contains:", ownedCards?.normal?.has(Number(card.id)));
-            //console.log("Foil set contains:", ownedCards?.foil?.has(Number(card.id)));
-
-            return (
-              <div
-                  key={card.id}
-                  className={`${styles.card} 
-                      ${ownedCards?.normal?.has(Number(card.id)) ? styles.owned : ""} 
-                      ${ownedCards?.foil?.has(Number(card.id)) ? styles.foilOwned : ""}`}
-                  onClick={() => openPopup(card)}
-              >
-                  {friendsCards.filter(friendCard => friendCard.card_id === card.id).length > 0 && (
-                      <div className={`${styles.friendTag} ${'friendTag'}`}   style={{ position: 'absolute', top: '5px', left: '5px', backgroundColor: 'red', color: 'white', padding: '5px' }}>
-                        {friendsCards.filter(friendCard => friendCard.card_id === card.id).slice(0, 2).map((friendCard, index) => (
-                          <span key={index}>{friendCard.username}</span>
-                        ))}
-                        {friendsCards.filter(friendCard => friendCard.card_id === card.id).length > 2 && (
-                          <span>+{friendsCards.filter(friendCard => friendCard.card_id === card.id).length - 2}</span>
-                        )}
-                      </div>
-                    )}
-                  <img
-                      src={card.images.thumbnail || "/path/to/default-image.jpg"}
-                      alt={card.name}
-                      className={styles.cardThumbnail}
-                  />
-                  <p className={styles.cardName}>{card.name}</p>
-                  <p className={styles.cardFullName}>{card.fullName}</p>
-              </div>
-          
-            );
-            })
-        ) : (
-            <p>{t("no_cards_found")}</p>
-        )}
-        </div>
-
-      {selectedCard && (
-        <div className={styles.popupOverlay} onClick={closePopup}>
-          <div
-            className={styles.popup}
-            onClick={(e) => e.stopPropagation()} // Popup selbst nicht schließen
-          >
-            <img
-              src={selectedCard.images.full || "/path/to/default-image.jpg"}
-              alt={selectedCard.name}
-              className={styles.popupImage}
-            />
-            <h2 className={styles.popupName}>{selectedCard.name}</h2>
-            <p className={styles.popupFullName}>{selectedCard.fullName}</p>
-            <div className={styles.popupButtons}>
-            
-            <div className={styles.quantityControl}>
-                <label>{t("own_quantity")}</label>
-                <div className={styles.quantityWrapper}>
-                    <button onClick={() => updateOwnedQuantity(-1)} className={styles.quantityButton}>-</button>
-                    <input type="text" value={ownedQuantity} readOnly className={styles.quantityInput} />
-                    <button onClick={() => updateOwnedQuantity(1)} className={styles.quantityButton}>+</button>
-                </div>
-            </div>
-
-            <div className={styles.quantityControl}>
-                <label>{t("foil_quantity")}</label>
-                <div className={styles.quantityWrapper}>
-                    <button onClick={() => updateFoilQuantity(-1)} className={styles.quantityButton}>-</button>
-                    <input type="text" value={foilQuantity} readOnly className={styles.quantityInput} />
-                    <button onClick={() => updateFoilQuantity(1)} className={styles.quantityButton}>+</button>
-                </div>
-            </div>
-
-            </div>
-            <button className={styles.popupCloseButton} onClick={closePopup}>
-              {t("close")}
-            </button>
+          <input
+            type="text"
+            placeholder={t("search_placeholder")}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={styles.searchInput}
+          />
+          <div className={styles.filterContainer}>
+            <select
+              className={styles.filterSelect}
+              value={selectedColor}
+              onChange={(e) => setSelectedColor(e.target.value)}
+            >
+              <option value="">{t("select_color")}</option>
+              <option value="Amber">{t("color_amber")}</option>
+              <option value="Amethyst">{t("color_amethyst")}</option>
+              <option value="Emerald">{t("color_emerald")}</option>
+              <option value="Ruby">{t("color_ruby")}</option>
+              <option value="Sapphire">{t("color_sapphire")}</option>
+              <option value="Steel">{t("color_steel")}</option>
+            </select>
+            <select
+              className={styles.filterSelect}
+              value={selectedRarity}
+              onChange={(e) => setSelectedRarity(e.target.value)}
+            >
+              <option value="">{t("select_rarity")}</option>
+              <option value="Common">{t("rarity_common")}</option>
+              <option value="Uncommon">{t("rarity_uncommon")}</option>
+              <option value="Rare">{t("rarity_rare")}</option>
+              <option value="Super Rare">{t("rarity_super_rare")}</option>
+              <option value="Legendary">{t("rarity_legendary")}</option>
+              <option value="Enchanted">{t("rarity_enchanted")}</option>
+              <option value="Special">{t("rarity_special")}</option>
+            </select>
+            <select
+              className={styles.filterSelect}
+              value={selectedSet}
+              onChange={(e) => setSelectedSet(e.target.value)}
+            >
+              <option value="">{t("select_set")}</option>
+              <option value="1">{t("set_1")}</option>
+              <option value="2">{t("set_2")}</option>
+              <option value="3">{t("set_3")}</option>
+              <option value="4">{t("set_4")}</option>
+              <option value="5">{t("set_5")}</option>
+              <option value="6">{t("set_6")}</option>
+              <option value="7">{t("set_7")}</option>
+            </select>
           </div>
+
         </div>
-      )}
+
+        <div className={styles.cartContainer}>
+
+          <div className={styles.sortContainer}>
+            <label>{t("sort_by")}:</label>
+            <select value={`${sortBy}-${sortOrder}`} onChange={handleSortChange} className={styles.sortSelect}>
+              <option value="id-ASC">{t("sort_id_asc")}</option>
+              <option value="id-DESC">{t("sort_id_desc")}</option>
+              <option value="cost-ASC">{t("sort_cost_asc")}</option>
+              <option value="cost-DESC">{t("sort_cost_desc")}</option>
+            </select>
+          </div>
+
+          <div className={styles.cardGrid}>
+
+            {isLoading ? (
+                <p>{t("loading_message")}</p>
+            ) : cards.length > 0 ? (
+                cards.map((card) => {
+
+                return (
+                  <div
+                      key={card.id}
+                      className={`${styles.card} ${styles.cardCatalog} 
+                          ${ownedCards?.normal?.has(Number(card.id)) ? styles.owned : ""} 
+                          ${ownedCards?.foil?.has(Number(card.id)) ? styles.foild : ""}`}
+                      onClick={() => openPopup(card)}
+                  >
+                      {friendsCards.filter(friendCard => friendCard.card_id === card.id).length > 0 && (
+                          <div className={`${styles.friendTag} ${'friendTag'}`}   >
+                            {friendsCards.filter(friendCard => friendCard.card_id === card.id).slice(0, 2).map((friendCard, index) => (
+                              <span key={index}>{friendCard.username}</span>
+                            ))}
+                            {friendsCards.filter(friendCard => friendCard.card_id === card.id).length > 2 && (
+                              <span>+{friendsCards.filter(friendCard => friendCard.card_id === card.id).length - 2}</span>
+                            )}
+                          </div>
+                        )}
+                      <img
+                          src={card.images.thumbnail || placeholder}
+                          alt={card.name}
+                          className={styles.cardImage}
+                      />
+                      
+                      <p className={styles.cardFullName}>{card.fullName}</p>
+                  </div>
+              
+                );
+                })
+            ) : (
+                <p>{t("no_cards_found")}</p>
+            )}
+
+              {selectedCard && (
+                <div className={styles.popupOverlay} onClick={closePopup}>
+                  <div
+                    className={`${styles.popup} ${styles["cart_popup"]}`}
+                    onClick={(e) => e.stopPropagation()} 
+                  >
+                    <img
+                      src={selectedCard.images.full || placeholder}
+                      alt={selectedCard.name}
+                      className={styles.cardImage}
+                    />
+                    <h2 className={styles.popupName}>{selectedCard.name}</h2>
+                    <p className={styles.popupFullName}>{selectedCard.fullName}</p>
+                    <div className={styles.popupButtons}>
+                    
+
+                    <div className={styles.quantityContainer} >
+                      <div className={styles.quantityControl}>
+                          <label>{t("own_quantity")}</label>
+                          <div className={styles.quantityWrapper}>
+                          
+                            <button onClick={() => updateOwnedQuantity(-1)} className={styles.quantityButton}>-</button>
+                          
+                            <input type="text" value={ownedQuantity} readOnly className={styles.quantityInput} />
+                          
+                            <button onClick={() => updateOwnedQuantity(1)} className={styles.quantityButton}>+</button>
+                          
+                          </div>
+                      </div>
+
+                      <div className={styles.quantityControl}>
+                          <label>{t("foil_quantity")}</label>
+                          <div className={styles.quantityWrapper}>
+                          
+                            <button onClick={() => updateFoilQuantity(-1)} className={styles.quantityButton}>-</button>
+                          
+                          <input type="text" value={foilQuantity} readOnly className={styles.quantityInput} />
+                          
+                            <button onClick={() => updateFoilQuantity(1)} className={styles.quantityButton}>+</button>
+                          
+                          </div>
+                      </div>
+                    </div>
+
+
+
+
+
+                    </div>
+                    <button onClick={closePopup}>{t("close")}</button>
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+
+
+        </div>
+
+        
+      </div>
     </div>
+
+
+
+
+
+
+
+
+
+
+
   );
 }
 

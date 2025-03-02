@@ -228,6 +228,9 @@ const set_game = async (req, res) => {
           id INT PRIMARY KEY AUTO_INCREMENT,
           card_id INT,
           language VARCHAR(10),
+          name VARCHAR(255),
+          full_name VARCHAR(255),
+          story TEXT,
           flavor_text TEXT,
           full_text TEXT,
           FOREIGN KEY (card_id) REFERENCES cards(id)
@@ -282,33 +285,70 @@ const set_game = async (req, res) => {
         );
       `);
 
+      console.log("🔽 Lade aktuelle JSON-Dateien herunter...");
+      await downloadCardData(req, { status: () => ({ json: () => {} }) });
+      console.log("✅ JSON-Dateien erfolgreich heruntergeladen.");
+
+
       // JSON-Dateien einlesen und importieren
       const dirPath = path.join(__dirname, '../games/lorcana');
       const files = fs.readdirSync(dirPath).filter(file => file.endsWith('.json'));
-
+      
       for (const file of files) {
         const filePath = path.join(dirPath, file);
         const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-
+      
         const language = data.metadata.language;
+      
         for (const card of data.cards) {
-          await req.pool.query(`
-            INSERT IGNORE INTO cards (id, set_code, number, name, full_name, type, color, cost, strength, willpower, rarity, story, inkwell)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `, [
-            card.id, card.setCode, card.number, card.name, card.fullName, card.type, card.color,
-            card.cost, card.strength, card.willpower, card.rarity, card.story, card.inkwell
-          ]);
-
-          await req.pool.query(`
-            INSERT INTO card_translations (card_id, language, flavor_text, full_text)
-            VALUES (?, ?, ?, ?)
-          `, [
-            card.id, language, card.flavorText || '', card.fullText || ''
-          ]);
-
+          // --- 1. Karten prüfen und einfügen ---
+          const [existingCard] = await req.pool.query(
+            "SELECT id FROM cards WHERE id = ? LIMIT 1",
+            [card.id]
+          );
+      
+          if (existingCard.length === 0) {
+            await req.pool.query(`
+              INSERT INTO cards (id, set_code, number, name, full_name, type, color, cost, strength, willpower, rarity, story, inkwell)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+              card.id, card.setCode, card.number, card.name, card.fullName, card.type, card.color,
+              card.cost, card.strength, card.willpower, card.rarity, card.story, card.inkwell
+            ]);
+          }
+      
+          // --- 2. Übersetzungen prüfen und einfügen ---
+          const [existingTranslation] = await req.pool.query(
+            "SELECT id FROM card_translations WHERE card_id = ? AND language = ? LIMIT 1",
+            [card.id, language]
+          );
+          
+          if (existingTranslation.length === 0) {
+            await req.pool.query(`
+              INSERT INTO card_translations (card_id, language, name, full_name, story, flavor_text, full_text)
+              VALUES (?, ?, ?, ?, ?, ?, ?)
+            `, [
+              card.id, language, card.name, card.fullName, card.story, card.flavorText || '', card.fullText || ''
+            ]);
+          } else {
+            // Falls die Übersetzung bereits existiert, ein Update durchführen
+            await req.pool.query(`
+              UPDATE card_translations 
+              SET name = ?, full_name = ?, story = ?, flavor_text = ?, full_text = ?
+              WHERE card_id = ? AND language = ?
+            `, [
+              card.name, card.fullName, card.story, card.flavorText || '', card.fullText || '', card.id, language
+            ]);
+          }
+      
+          // --- 3. Bilder prüfen und einfügen ---
           const { full, thumbnail, foilMask } = card.images || {};
-          if (full || thumbnail || foilMask) {
+          const [existingImage] = await req.pool.query(
+            "SELECT id FROM card_images WHERE card_id = ? AND language = ? LIMIT 1",
+            [card.id, language]
+          );
+      
+          if (existingImage.length === 0 && (full || thumbnail || foilMask)) {
             await req.pool.query(`
               INSERT INTO card_images (card_id, language, full_url, thumbnail_url, foil_mask_url)
               VALUES (?, ?, ?, ?, ?)
@@ -318,6 +358,8 @@ const set_game = async (req, res) => {
           }
         }
       }
+
+
     }
 
     return res.status(200).json({ message: "Game updated and tables populated successfully" });
@@ -326,6 +368,45 @@ const set_game = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+
+
+const axios = require("axios");
+
+// Verzeichnis für die Kartendaten
+const DATA_DIR = path.join(__dirname, "../games/lorcana");
+
+// URLs für die JSON-Dateien
+const JSON_SOURCES = {
+  en: "https://lorcanajson.org/files/current/en/allCards.json",
+  fr: "https://lorcanajson.org/files/current/fr/allCards.json",
+  de: "https://lorcanajson.org/files/current/de/allCards.json"
+};
+
+// Funktion zum Herunterladen der JSON-Dateien
+const downloadCardData = async (req, res) => {
+  try {
+    // Stelle sicher, dass das Verzeichnis existiert
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+
+    // Lade alle verfügbaren JSON-Dateien herunter
+    for (const [lang, url] of Object.entries(JSON_SOURCES)) {
+      const filePath = path.join(DATA_DIR, `allCards_${lang}.json`);
+      const response = await axios.get(url, { responseType: "arraybuffer" });
+
+      fs.writeFileSync(filePath, response.data);
+      console.log(`JSON-Datei (${lang}) erfolgreich gespeichert:`, filePath);
+    }
+
+    return res.status(200).json({ message: "Kartendaten erfolgreich aktualisiert." });
+  } catch (error) {
+    console.error("Fehler beim Herunterladen der Kartendaten:", error);
+    return res.status(500).json({ message: "Fehler beim Herunterladen der Kartendaten." });
+  }
+};
+
 
 
 
@@ -508,4 +589,4 @@ const set_password = async (req, res) => {
 
 module.exports = { is_ready, is_admin, is_new_reg, set_new_reg, set_setup_wizard,
                    get_language, set_language, get_game, set_game, get_seeFriends, 
-                   set_seeFriends, get_username, set_username, set_password };
+                   set_seeFriends, get_username, set_username, set_password, downloadCardData };

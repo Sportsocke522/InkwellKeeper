@@ -1,14 +1,16 @@
-//importing necessary libraries for signup function
-import { useState, useEffect } from "react"; //use state for state variables
-import axios from "axios"; //axios for communication with backend
-import { toast } from "sonner"; //sonner for toast notification
-//import styles from "../styles/Signup.module.css"; //module css import
+
+import { useState, useEffect } from "react"; 
+import axios from "axios"; 
+import { toast } from "sonner"; 
+import styles from "../styles/App.module.css"; 
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
-//creation of the sign-up component function
+import logo from "../styles/images/logo.png";
+
+
 function SignupPage() {
-  //state variables declaration using useState
+  
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,14 +19,17 @@ function SignupPage() {
   const { t } = useTranslation();
 
   useEffect(() => {
-    document.title = t("signup_page_title"); // Dynamically sets the page title
+    // Set the document title dynamically using translations
+    document.title = t("signup") + " - " + t("inkwell"); 
   });
 
-  //axios post function which will first check for valid input, send a post request, and then use sonner to render a toast notification
+  // Handles user signup when the form is submitted
   const handleSignup = async (e) => {
-    e.preventDefault(); //disables the reload on submission
+
+    // Prevents the default form submission behavior
+    e.preventDefault(); 
     try {
-      //check if user has filled all required fields
+      // Check if username, email, or password fields are empty
       if (
         !username ||
         username === "" ||
@@ -33,93 +38,115 @@ function SignupPage() {
         !password ||
         password === ""
       ) {
-        //incase all fields are not filled warn the user
+        
         toast.warning(t("fields_required"));
-        return; //return if the case matches
+        return; 
       }
 
-      //if user has filled all necessary fields send axios post request
+       // Send signup request to the backend
       const res = await axios.post("http://localhost:3000/auth/auth/signup", {
         username: username,
         email: email,
         password: password,
       });
 
-      //on successful account creation
+      
       if (res.status === 201) {
-        setUsername(""); //empty the field after successful signup
-        setEmail(""); //empty the field after successful signup
-        setPassword(""); //empty the field after successful signup
-        //notify the client that the user has been created
+        setUsername(""); 
+        setEmail(""); 
+        setPassword(""); 
+        
         toast.success(t("signup_successful_redirecting"));
       }
 
+      // Redirect to the login page after 2 seconds
       setTimeout(() => {
         navigate("/login");
-      }, 3000);
+      }, 2000);
     } catch (error) {
-      //in case of error
-      console.error("Error Creating User: ", error);
+      
+      
       toast.error(t("error_creating_user"));
     }
   };
 
-  //bootstrap components
+  
   return (
     <>
-      <div className={"card"} id={styles.card}>
-        <div className={"card-body"}>
-          <h2 id={styles.h2}>{t("signup")}</h2>
-          <hr />
-          <form onSubmit={handleSignup}>
-            {/* for Username */}
-            <div>
-              <label>{t("username_label")}</label>
-              <input
-                type="text"
-                name="username"
-                placeholder={t("username_placeholder")}
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
+      <div className={styles.container_login}>
+        <div className={styles.container_login_inner}>
+          <div className={styles.userSettingsWrapper}>
+            <div className={styles.settingsblock}>
+              <div className={styles.loginlogoheader}>
+                <img src={logo} alt={`${t("inkwell")} ${t("logo")}`} />
+                <h1>{t("inkwell")}</h1>
+              </div>
+
+              <h2 id={styles.loginnHeandline}>{t("signup")}</h2>
+              
+              <form onSubmit={handleSignup}>
+                {/* Username */}
+                <div className={styles.logininputblock}>
+                  <label>{t("username_label")}</label>
+                  <input
+                    type="text"
+                    name="username"
+                    placeholder={t("username_placeholder")}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className={styles.searchInput}
+                  />
+                </div>
+
+                {/* Email */}
+                <div className={styles.logininputblock}>
+                  <label>{t("email_label")}</label>
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder={t("email_placeholder")}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className={styles.searchInput}
+                  />
+                </div>
+
+                {/* Password */}
+                <div className={styles.logininputblock}>
+                  <label>{t("password_label")}</label>
+                  <input
+                    type="password"
+                    name="password"
+                    placeholder={t("password_placeholder")}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={styles.searchInput}
+                  />
+                </div>
+
+                {/* Login Link */}
+                <div className={styles.LoginContainerControlls}>
+                  <a>
+                    <Link to="/login">{t("login_prompt")}</Link>
+                  </a>
+                </div>
+
+                {/* Submit Button */}
+                <div className={styles.LoginContainerControlls}>
+                  <button
+                    className={`${styles.btn} ${styles["btn-primary"]}`}
+                    type="submit"
+                  >
+                    {t("signup")}
+                  </button>
+                </div>
+              </form>
             </div>
-
-            {/* for Email */}
-            <div>
-              <label>{t("email_label")}</label>
-              <input
-                type="email"
-                name="email"
-                placeholder={t("email_placeholder")}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-
-            {/* for Password */}
-            <div>
-              <label>{t("password_label")}</label>
-              <input
-                type="password"
-                name="password"
-                placeholder={t("password_placeholder")}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-
-            {/* login */}
-            <a>
-              <Link to="/login">{t("login_prompt")}</Link>
-            </a>
-
-            {/* signup */}
-            <button className={"btn btn-success"} type="submit">
-              {t("signup")}
-            </button>
-          </form>
+          </div>
         </div>
       </div>
+
+
     </>
   );
 }

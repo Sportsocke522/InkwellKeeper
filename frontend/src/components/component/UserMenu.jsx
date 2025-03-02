@@ -2,11 +2,13 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaCog, FaSignOutAlt } from "react-icons/fa";
 import styles from "../styles/App.module.css";
+import { useTranslation } from "react-i18next";
 
 const UserMenu = ({ username }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const toggleMenu = () => {
     setMenuOpen(!menuOpen);
@@ -46,10 +48,10 @@ const UserMenu = ({ username }) => {
           
           <ul>
             <li onClick={() => navigate("/settings")}>
-              <FaCog /> Settings
+              <FaCog /> {t("nav_settings")}
             </li>
             <li onClick={handleLogout}>
-              <FaSignOutAlt /> Logout
+              <FaSignOutAlt /> {t("logout")}
             </li>
           </ul>
         </div>

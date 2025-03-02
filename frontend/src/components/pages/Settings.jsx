@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-//import styles from "../styles/Settings.module.css";
+import styles from "../styles/App.module.css";
 import { toast } from "sonner";
 import { availableLanguages } from "../../i18n";
-import i18n from "../../i18n"; // Import von i18n
+import i18n from "../../i18n"; 
 import { useTranslation } from "react-i18next";
+import { FaGlobe, FaGithub } from "react-icons/fa";
 
 function Settings() {
   const { t } = useTranslation();
@@ -16,6 +17,9 @@ function Settings() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
+
+  // Updates the user's username in the backend.
+// Sends a POST request with the new username and handles success or error feedback.
   const handleSaveUsername = async () => {
     try {
       const response = await fetch("http://localhost:3000/settings/set_username", {
@@ -33,10 +37,11 @@ function Settings() {
       }
     } catch (error) {
       toast.error(t("update_failed"));
-      console.error("Error updating username:", error);
     }
   };
 
+  // Updates the user's password in the backend.
+  // Sends a POST request with the new password and handles success or error feedback.
   const handleSavePassword = async () => {
     try {
       const response = await fetch("http://localhost:3000/settings/set_password", {
@@ -54,93 +59,224 @@ function Settings() {
       }
     } catch (error) {
       toast.error(t("update_failed"));
-      console.error("Error updating password:", error);
     }
   };
 
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const [adminRes, languageRes, regRes, friendsRes, userRes] = await Promise.all([
-          fetch("http://localhost:3000/settings/is_admin", { credentials: "include" }),
-          fetch("http://localhost:3000/settings/get_language", { credentials: "include" }),
-          fetch("http://localhost:3000/settings/is_new_reg", { credentials: "include" }),
-          fetch("http://localhost:3000/settings/get_seeFriends", { credentials: "include" }),
-          fetch("http://localhost:3000/settings/get_username", { credentials: "include" })
-        ]);
-
-        if (!adminRes.ok || !languageRes.ok || !regRes.ok || !friendsRes.ok || !userRes.ok) throw new Error("Failed to fetch settings");
-
-        setIsAdmin((await adminRes.json()).is_admin === 1);
-        setSelectedLanguage((await languageRes.json()).language || "en");
-        setIsNewRegEnabled((await regRes.json()).is_new_reg);
-        setIsSeeFriends((await friendsRes.json()).seeFriendsCollection);
-        setUsername((await userRes.json()).username);
-        i18n.changeLanguage(selectedLanguage);
-      } catch (error) {
-        console.error("Error fetching settings:", error);
-        toast.error(t("fetch_settings_failed"));
+  // Handles the language change by updating the state, UI, and backend.
+  // Sends the new language setting to the server and updates the translation system.
+  const handleLanguageChange = async (e) => {
+    const newLanguage = e.target.value;
+  
+    setSelectedLanguage(newLanguage); 
+    i18n.changeLanguage(newLanguage); 
+  
+    try {
+      const response = await fetch("http://localhost:3000/settings/set_language", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ language: newLanguage }),
+      });
+  
+      if (response.ok) {
+        toast.success(t("language_updated"));
+      } else {
+        toast.error(t("update_failed"));
       }
+    } catch (error) {
+      toast.error(t("update_failed"));
+    }
+  };
+  
+  // Updates the game data in the database by first fetching the current game setting
+  // and then sending it back to the server to ensure the database is up to date.
+  const handleUpdateDatebase = async () => {
+    try {
+      const gameResponse = await fetch("http://localhost:3000/settings/get_game", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+  
+      if (!gameResponse.ok) {
+        const errorData = await gameResponse.json();
+        toast.error(t("fetch_game_failed"));
+        return;
+      }
+  
+      const gameData = await gameResponse.json();
+      const currentGame = gameData.game;
+  
+      if (!currentGame) {
+        toast.error(t("no_game_found"));
+        return;
+      }
+  
+      const updateResponse = await fetch("http://localhost:3000/settings/set_game", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ game: currentGame }),
+      });
+  
+      const updateData = await updateResponse.json();
+  
+      if (updateResponse.ok) {
+        toast.success(t("database_update_success"));
+      } else {
+        toast.error(t("database_update_failed"));
+      }
+    } catch (error) {
+     
+      toast.error(t("error_generic"));
+    }
+  };
+
+
+  // Fetches and sets user settings when the settings page is loaded.
+  // Retrieves multiple settings in parallel, updates the state, and applies the language preference.
+  useEffect(() => {
+    document.title = t("settings_headline") + " - " + t("inkwell");
+
+    const fetchSettings = async () => {
+        try {
+            const [adminRes, languageRes, regRes, friendsRes, userRes] = await Promise.all([
+                fetch("http://localhost:3000/settings/is_admin", { credentials: "include" }),
+                fetch("http://localhost:3000/settings/get_language", { credentials: "include" }),
+                fetch("http://localhost:3000/settings/is_new_reg", { credentials: "include" }),
+                fetch("http://localhost:3000/settings/get_seeFriends", { credentials: "include" }),
+                fetch("http://localhost:3000/settings/get_username", { credentials: "include" })
+            ]);
+
+            if (!adminRes.ok || !languageRes.ok || !regRes.ok || !friendsRes.ok || !userRes.ok) {
+                throw new Error("Failed to fetch settings");
+            }
+
+            setIsAdmin((await adminRes.json()).is_admin === 1);
+            setIsNewRegEnabled((await regRes.json()).is_new_reg);
+            setIsSeeFriends((await friendsRes.json()).seeFriendsCollection);
+            setUsername((await userRes.json()).username);
+
+            
+            const langData = await languageRes.json();
+            const newLanguage = langData.language || "en";
+            setSelectedLanguage(newLanguage);
+            i18n.changeLanguage(newLanguage); 
+        } catch (error) {
+            toast.error(t("fetch_settings_failed"));
+        }
     };
+
     fetchSettings();
-  }, []);
+}, []);
+
 
   return (
     <div className={styles.container}>
-      <h2>{t("user_settings")}</h2>
-      <div className={styles.userSettings}>
-        <h3>{t("change_username")}</h3>
-        <input
-          type="text"
-          value={username}
-          placeholder={t("enter_new_username")}
-          onChange={(e) => setUsername(e.target.value)}
-        />
-        <button onClick={handleSaveUsername}>{t("save_username")}</button>
-        <h3>{t("change_password")}</h3>
-        <input
-          type="password"
-          value={password}
-          placeholder={t("enter_new_password")}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <button onClick={handleSavePassword}>{t("save_password")}</button>
+      <div className={styles.contentWrapper}>
+        <h2 className={styles.dashboardTitle}>{t("settings_headline")}</h2>
+        <div className={styles.userSettingsWrapper}>
+          <h2 >{t("user_settings")}</h2>
+            <div className={styles.settingsblock}>
+              <h3>{t("change_username")}</h3>
+              <input
+                type="text"
+                value={username}
+                placeholder={t("enter_new_username")}
+                onChange={(e) => setUsername(e.target.value)}
+                className={styles.searchInput}
+              />
+              <button onClick={handleSaveUsername} className={`${styles.btn} ${styles["btn-primary"]}`}>{t("save_username")}</button>
+            </div>
+
+            <div className={styles.settingsblock}>
+              <h3>{t("change_password")}</h3>
+              <input
+                type="password"
+                value={password}
+                placeholder={t("enter_new_password")}
+                onChange={(e) => setPassword(e.target.value)}
+                className={styles.searchInput}
+              />
+              <button onClick={handleSavePassword} className={`${styles.btn} ${styles["btn-primary"]}`}>{t("save_password")}</button>
+            </div>
+        </div>
+        {isAdmin && (
+          <>
+            <div className={styles.AdminSettingsWrapper}>
+              <h2>{t("admin_settings")}</h2>
+
+              <div className={styles.settingsblock}>
+                <h3>{t("enable_disable_registrations")}</h3>
+                <label className={styles.switch}>
+                  <input
+                    type="checkbox"
+                    checked={isNewRegEnabled ?? false}
+                    onChange={(e) => setIsNewRegEnabled(e.target.checked)}
+                  />
+                  <span className={styles.slider}></span>
+                </label>
+                <p className={styles.settingDescription}>{t("enable_disable_registrations_desc")}</p>
+              </div>
+
+              <div className={styles.settingsblock}>
+                <h3>{t("enable_disable_see_friends")}</h3>
+                <label className={styles.switch}>
+                  <input
+                    type="checkbox"
+                    checked={isSeeFriends ?? false}
+                    onChange={(e) => setIsSeeFriends(e.target.checked)}
+                  />
+                  <span className={styles.slider}></span>
+                </label>
+                <p className={styles.settingDescription}>{t("enable_disable_see_friends_desc")}</p>
+              </div>
+
+              <div className={styles.settingsblock}>
+                <h3>{t("select_language")}</h3>
+                <select
+                  className={styles.filterSelect}
+                  value={selectedLanguage}
+                  onChange={(e) => handleLanguageChange(e)}
+                >
+                  {availableLanguages.map((lang) => (
+                    <option key={lang.code} value={lang.code}>
+                      {lang.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles.settingsblock}>
+                <h3>{t("select_game")}</h3>
+                <select
+                  className={styles.filterSelect}
+                  value={selectedGame}
+                  onChange={(e) => setSelectedGame(e.target.value)}
+                >
+                  <option value="Lorcana">{t("game_lorcana")}</option>
+                </select>
+                <button onClick={handleUpdateDatebase} className={`${styles.btn} ${styles["btn-primary"]}`}>{t("update_card_catalog")}</button>
+
+                <p className={styles.dataSourceInfo}>
+                  {t("lorcana_data_thanks")}{" "}
+                  <a href={t("lorcana_json_url")} target="_blank" rel="noopener noreferrer">
+                    <FaGlobe /> {t("lorcana_json")}
+                  </a>{" "}
+                  - {t("check_out_his_content")}{" "}
+                  <a href={t("lorcana_github_url")} target="_blank" rel="noopener noreferrer">
+                    <FaGithub /> {t("github")}
+                  </a>!
+                </p>
+
+              </div>
+
+            </div>
+          </>
+        )}
       </div>
 
-      <h3>{t("admin_settings")}</h3>
-      {isAdmin && (
-        <>
-          <p>{t("enable_disable_registrations")}</p>
-          <label className={styles.switch}>
-            <input type="checkbox" checked={isNewRegEnabled} onChange={(e) => {
-              setIsNewRegEnabled(e.target.checked);
-            }} />
-            <span className={styles.slider}></span>
-          </label>
-          <p>{t("enable_disable_see_friends")}</p>
-          <label className={styles.switch}>
-            <input type="checkbox" checked={isSeeFriends} onChange={(e) => {
-              setIsSeeFriends(e.target.checked);
-            }} />
-            <span className={styles.slider}></span>
-          </label>
-          <p>{t("select_language")}</p>
-          <select value={selectedLanguage} onChange={(e) => {
-            setSelectedLanguage(e.target.value);
-          }}>
-            {availableLanguages.map((lang) => (
-              <option key={lang.code} value={lang.code}>{lang.name}</option>
-            ))}
-          </select>
-          <p>{t("select_game")}</p>
-          <select value={selectedGame} onChange={(e) => {
-            setSelectedGame(e.target.value);
-          }}>
-            <option value="Lorcana">Lorcana</option>
-          </select>
-          <button>{t("update_card_catalog")}</button>
-        </>
-      )}
+      
     </div>
   );
 }

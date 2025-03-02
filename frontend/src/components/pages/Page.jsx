@@ -1,6 +1,5 @@
-//this is a simple 404 page with some custom styling and routing
+
 import { useEffect } from "react";
-//import styles from "../styles/Page.module.css";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -9,7 +8,7 @@ function Page() {
   const { t } = useTranslation();
 
   useEffect(() => {
-    document.title = t("404_page_title"); // Dynamically sets the page title
+    document.title = t("404_page_title") + " - " + t("inkwell"); 
   });
 
   return (
@@ -29,5 +28,5 @@ function Page() {
   );
 }
 
-//exporting the created function
+
 export default Page;

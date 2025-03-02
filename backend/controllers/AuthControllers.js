@@ -111,5 +111,20 @@ const LoginController = async (req, res) => {
   }
 };
 
+
+const check = async (req, res) => {
+  try {
+    if (req.cookies.token) {
+      // Hier könntest du dein Token validieren, z.B. mit JWT
+      res.sendStatus(200);
+    } else {
+      res.sendStatus(401);
+    }
+  } catch (error) {
+      
+      return res.status(500).json({ message: "Interner Serverfehler" });
+  }
+};
+
 //exporting the controller function
-module.exports = { SignUpController, LoginController };
+module.exports = { SignUpController, LoginController, check };

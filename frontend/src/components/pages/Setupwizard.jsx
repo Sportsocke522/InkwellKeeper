@@ -3,8 +3,10 @@ import styles from "../styles/App.module.css";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { availableLanguages } from "../../i18n";
-import i18n from "../../i18n"; // Import von i18n
+import i18n from "../../i18n"; 
 import { useTranslation } from "react-i18next";
+
+import { FaGlobe, FaGithub } from "react-icons/fa";
 
 function SetupWizard() {
   const navigate = useNavigate();
@@ -12,15 +14,19 @@ function SetupWizard() {
   const [isReady, setIsReady] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
-  const [isNewRegEnabled, setIsNewRegEnabled] = useState(null); // Status für neue Registrierungen
-  const [selectedLanguage, setSelectedLanguage] = useState("en"); // Standardmäßig Englisch
+  const [isNewRegEnabled, setIsNewRegEnabled] = useState(null); 
+  const [selectedLanguage, setSelectedLanguage] = useState("en"); 
   const [selectedGame, setSelectedGame] = useState("Lorcana");
   const [isLoading, setIsLoading] = useState(false);
   const [isSeeFriends, setIsSeeFriends] = useState(null);
 
   
+
+  // Fetches initial system status when the setup wizard is loaded.
+  // Checks if the user is an admin and whether the system is already set up.
+  // If the system is ready or the user lacks admin rights, redirects to the home page.
   useEffect(() => {
-    document.title = t("setup_wizard_title");
+    document.title = t("setup_wizard_title") + " - " + t("inkwell");
 
     const fetchInitialStatus = async () => {
       try {
@@ -53,18 +59,18 @@ function SetupWizard() {
         setIsAdmin(adminData.is_admin === 1);
         setIsReady(readyData.is_ready === 1);
 
-        // Sprache setzen
+        
         const language = languageData.language || "en";
         setSelectedLanguage(language);
         i18n.changeLanguage(language);
 
-        // Redirect if conditions are not met
+        
         if (readyData.is_ready || adminData.is_admin !== 1) {
           toast.error(t("setup_unauthorized"));
           navigate("/");
         }
       } catch (error) {
-        console.error("Error fetching status:", error);
+        
         toast.error(t("setup_verification_failed"));
         navigate("/");
       }
@@ -73,6 +79,9 @@ function SetupWizard() {
     fetchInitialStatus();
   }, [navigate]);
 
+
+  // Fetches the status of the new user registration setting from the backend.
+  // Updates the state based on the API response and handles errors.
   const fetchNewRegStatus = async () => {
     try {
       const response = await fetch("http://localhost:3000/settings/is_new_reg", {
@@ -86,15 +95,17 @@ function SetupWizard() {
       }
   
       const data = await response.json();
-      setIsNewRegEnabled(data.is_new_reg); // Setze direkt den Boolean-Wert
-  
-      console.log("isreg erhalten (aus Antwort):", data.is_new_reg);
+      setIsNewRegEnabled(data.is_new_reg); 
+
     } catch (error) {
-      console.error("Error fetching new registration status:", error);
+      
       toast.error(t("fetch_new_reg_failed"));
     }
   };
 
+  
+  // Fetches the status of the "See Friends' Collection" setting from the backend.
+  // Updates the state based on the API response and handles errors.
   const fetchSeeFriendsStatus = async () => {
     try {
       const response = await fetch("http://localhost:3000/settings/get_seeFriends", {
@@ -108,20 +119,23 @@ function SetupWizard() {
       }
   
       const data = await response.json();
-      setIsSeeFriends(data.seeFriendsCollection); // Setze direkt den Boolean-Wert
+      setIsSeeFriends(data.seeFriendsCollection); 
   
-      console.log("isreg erhalten (aus Antwort):", data.seeFriendsCollection);
     } catch (error) {
-      console.error("Error fetching new registration status:", error);
+      
       toast.error(t("fetch_new_reg_failed"));
     }
   };
 
+
+
+  // Saves general server settings, including language and game selection.
+  // Updates the language in the UI and sends the settings to the backend.
   const savegeneralServerSettings = async () => {
     try {
       setIsLoading(true);
 
-      await i18n.changeLanguage(selectedLanguage); // Sprache im i18n-Modul ändern
+      await i18n.changeLanguage(selectedLanguage); 
   
       const languageResponse = await fetch("http://localhost:3000/settings/set_language", {
         method: "POST",
@@ -130,7 +144,7 @@ function SetupWizard() {
         body: JSON.stringify({ language: selectedLanguage }),
       });
 
-      // Spiel speichern und Tabellen erstellen
+      
       const gameResponse = await fetch("http://localhost:3000/settings/set_game", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -142,16 +156,19 @@ function SetupWizard() {
         throw new Error("Failed to save settings");
       }
   
-      toast.success(t("language_saved_successfully"));//String Anpassen
-      setCurrentPage(2); // Gehe zur nächsten Seite
+      toast.success(t("language_saved_successfully"));
+      setCurrentPage(2); 
     } catch (error) {
-      console.error("Error saving language:", error);
       toast.error(t("language_save_failed"));
     } finally {
-      setIsLoading(false); // Ladezustand deaktivieren
+      setIsLoading(false); 
     }
   };
 
+
+
+  // Fetches specific settings when the user is on page 1 of the setup process.
+  // Retrieves the status of new user registration and the visibility of friends' collections.
   useEffect(() => {
     if (currentPage === 1) {
       fetchNewRegStatus();
@@ -159,21 +176,24 @@ function SetupWizard() {
     }
   }, [currentPage]);
 
+
+  // Finalizes the setup process by marking the setup wizard as completed.
+  // Sends a request to update the system status and navigates to the home page.
   const finalizeSetup = async () => {
     try {
       const response = await fetch("http://localhost:3000/settings/set_setup_wizard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ is_ready: true }), // Nur is_ready senden
+        body: JSON.stringify({ is_ready: true }), 
       });
   
       if (!response.ok) throw new Error("Failed to finalize setup");
   
       toast.success(t("setup_completed_successfully"));
-      navigate("/"); // Weiterleitung zur gewünschten Seite
+      navigate("/"); 
     } catch (error) {
-      console.error("Error finalizing setup:", error);
+      
       toast.error(t("setup_completion_failed"));
     }
   };
@@ -233,6 +253,17 @@ function SetupWizard() {
                         <option value="Lorcana">Lorcana</option>
                       </select>
 
+                      <p className={styles.dataSourceInfo}>
+                        {t("lorcana_data_thanks")}{" "}
+                        <a href={t("lorcana_json_url")} target="_blank" rel="noopener noreferrer">
+                          <FaGlobe /> {t("lorcana_json")}
+                        </a>{" "}
+                        - {t("check_out_his_content")}{" "}
+                        <a href={t("lorcana_github_url")} target="_blank" rel="noopener noreferrer">
+                          <FaGithub /> {t("github")}
+                        </a>!
+                      </p>
+
                       <button className={`${styles.btn} ${styles["btn-danger"]}`} onClick={() => setCurrentPage(0)}>
                         {t("back")}
                       </button>
@@ -246,71 +277,79 @@ function SetupWizard() {
                   return (
                     <div>
                       <h2>{t("user_control")}</h2>
+
+                      <div className={styles.settingsblock}>
                       <p>{t("enable_disable_registrations")}</p>
-                      <label className={styles.switch}>
-                        <input
-                          type="checkbox"
-                          checked={isNewRegEnabled ?? false}
-                          onChange={async (e) => {
-                            const newValue = e.target.checked;
-                            setIsNewRegEnabled(newValue);
-                            try {
-                              const response = await fetch(
-                                "http://localhost:3000/settings/set_new_reg",
-                                {
-                                  method: "POST",
-                                  headers: { "Content-Type": "application/json" },
-                                  credentials: "include",
-                                  body: JSON.stringify({ allowRegistration: newValue }),
-                                }
-                              );
-                              if (!response.ok) throw new Error("Failed to update registration setting");
+                        <label className={styles.switch}>
+                          <input
+                            type="checkbox"
+                            checked={isNewRegEnabled ?? false}
+                            onChange={async (e) => {
+                              const newValue = e.target.checked;
+                              setIsNewRegEnabled(newValue);
+                              try {
+                                const response = await fetch(
+                                  "http://localhost:3000/settings/set_new_reg",
+                                  {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    credentials: "include",
+                                    body: JSON.stringify({ allowRegistration: newValue }),
+                                  }
+                                );
+                                if (!response.ok) throw new Error("Failed to update registration setting");
 
-                              toast.success(
-                                `${t("registrations_enabled")} ${newValue ? t("enabled") : t("disabled")}.`
-                              );
-                            } catch (error) {
-                              console.error("Error updating registration status:", error);
-                              toast.error(t("update_registration_failed"));
-                              setIsNewRegEnabled(!newValue);
-                            }
-                          }}
-                        />
-                        <span className={styles.slider}></span>
-                      </label>
+                                toast.success(
+                                  `${t("registrations_enabled")} ${newValue ? t("enabled") : t("disabled")}.`
+                                );
+                              } catch (error) {
+                                //console.error("Error updating registration status:", error);
+                                toast.error(t("update_registration_failed"));
+                                setIsNewRegEnabled(!newValue);
+                              }
+                            }}
+                          />
+                          <span className={styles.slider}></span>
+                        </label>
+                        <p className={styles.settingDescription}>{t("enable_disable_registrations_desc")}</p>
+                      </div>
 
-                      <p>{t("enable_disable_seeFriends")}</p>
-                      <label className={styles.switch}>
-                        <input
-                          type="checkbox"
-                          checked={isSeeFriends ?? false}
-                          onChange={async (e) => {
-                            const newValue = e.target.checked;
-                            setIsSeeFriends(newValue);
-                            try {
-                              const response = await fetch(
-                                "http://localhost:3000/settings/set_seeFriends",
-                                {
-                                  method: "POST",
-                                  headers: { "Content-Type": "application/json" },
-                                  credentials: "include",
-                                  body: JSON.stringify({ seeFriendsCollection: newValue }),
-                                }
-                              );
-                              if (!response.ok) throw new Error("Failed to update see Friends setting");
+                      <div className={styles.settingsblock}>
+                      <p>{t("enable_disable_see_friends")}</p>
+                        <label className={styles.switch}>
+                          <input
+                            type="checkbox"
+                            checked={isSeeFriends ?? false}
+                            onChange={async (e) => {
+                              const newValue = e.target.checked;
+                              setIsSeeFriends(newValue);
+                              try {
+                                const response = await fetch(
+                                  "http://localhost:3000/settings/set_seeFriends",
+                                  {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    credentials: "include",
+                                    body: JSON.stringify({ seeFriendsCollection: newValue }),
+                                  }
+                                );
+                                if (!response.ok) throw new Error("Failed to update see Friends setting");
 
-                              toast.success(
-                                `${t("see_friends_enabled")} ${newValue ? t("enabled") : t("disabled")}.`
-                              );
-                            } catch (error) {
-                              console.error("Error updating see friends status:", error);
-                              toast.error(t("update_see_friends_failed"));
-                              setIsSeeFriends(!newValue);
-                            }
-                          }}
-                        />
-                        <span className={styles.slider}></span>
-                      </label>
+                                toast.success(
+                                  `${t("see_friends_enabled")} ${newValue ? t("enabled") : t("disabled")}.`
+                                );
+                              } catch (error) {
+                                //console.error("Error updating see friends status:", error);
+                                toast.error(t("update_see_friends_failed"));
+                                setIsSeeFriends(!newValue);
+                              }
+                            }}
+                          />
+                          <span className={styles.slider}></span>
+                        </label>
+                        <p className={styles.settingDescription}>{t("enable_disable_see_friends_desc")}</p>
+                      </div>
+
                       <br></br>
                       <button className={`${styles.btn} ${styles["btn-danger"]}`} onClick={() => setCurrentPage(1)}>
                         {t("back")}

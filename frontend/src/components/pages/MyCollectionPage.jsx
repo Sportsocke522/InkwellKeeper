@@ -3,6 +3,8 @@ import styles from "../styles/App.module.css";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import placeholder from "../styles/images/card_placeholder.png";
+
 function MyCollectionPage() {
   const { t } = useTranslation();
 
@@ -28,16 +30,33 @@ function MyCollectionPage() {
   const [decks, setDecks] = useState([]);
   const [sortOrder, setSortOrder] = useState("ASC");
   const [sortBy, setSortBy] = useState("id");
+  const [loadedImages, setLoadedImages] = useState({});
 
+
+  // Mark the image as loaded for a specific card
+  const handleImageLoad = (cardId) => {
+      setLoadedImages((prev) => ({
+          ...prev,
+          [cardId]: true, 
+      }));
+  };
 
 
   useEffect(() => {
+     // Set the document title dynamically using translations
+    document.title = t("my_collection") + " - " + t("inkwell");
+    
+     // Fetch collection statistics
     fetchCollectionStats();
+    // Fetch the user's owned cards
     fetchOwnedCards();
+
+    // Re-fetch data when sorting options change
   }, [sortBy, sortOrder]);
 
-  // Verzögerung der Suchanfrage, um unnötige API-Aufrufe zu vermeiden
+  
   useEffect(() => {
+    // Debounce search query to reduce API calls while typing
     const handler = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
     }, 500);
@@ -45,19 +64,22 @@ function MyCollectionPage() {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  // Automatische Filter-Updates
+  
   useEffect(() => {
+    // Log the current filter settings before fetching data
     console.log("Fetching cards with filters:", {
         searchQuery: debouncedSearchQuery,
         color: selectedColor,
         rarity: selectedRarity,
         set: selectedSet,
       });
+      // Fetch the user's owned cards with the updated filters
     fetchOwnedCards();
   }, [debouncedSearchQuery, selectedColor, selectedRarity, selectedSet, sortBy, sortOrder]);
 
   const fetchCollectionStats = async () => {
     try {
+      // Send a GET request to retrieve collection statistics
       const response = await fetch("http://localhost:3000/cards/collection/stats", {
         method: "GET",
         credentials: "include",
@@ -66,19 +88,27 @@ function MyCollectionPage() {
       if (!response.ok) throw new Error("Failed to fetch collection stats");
 
       const data = await response.json();
+      // Update state with overall collection statistics
       setCollectionStats(data);
+      // Store statistics related to specific sets
       setSetStatistics(data.sets || []);
     } catch (error) {
-      console.error("Error fetching collection stats:", error);
+      
     }
   };
+
+
   const handleSortChange = (e) => {
+    // Extract sorting field and order from the selected option
     const [field, order] = e.target.value.split("-");
     setSortBy(field);
     setSortOrder(order);
   };
+
+
   const fetchOwnedCards = async () => {
     try {
+      // Construct query parameters based on filters and search input
       const queryParams = new URLSearchParams({
         search: debouncedSearchQuery || "",
         set_code: selectedSet || "",
@@ -88,6 +118,7 @@ function MyCollectionPage() {
         sort_order: sortOrder,
       }).toString();
 
+      // Fetch the user's owned cards from the API
       const response = await fetch(`http://localhost:3000/cards/collection?${queryParams}`, {
         method: "GET",
         headers: {
@@ -99,6 +130,8 @@ function MyCollectionPage() {
       if (!response.ok) throw new Error("Failed to fetch owned cards");
 
       const data = await response.json();
+
+      // Remove duplicate cards based on their ID
       const uniqueCards = data.cards.reduce((acc, card) => {
         if (!acc.some((c) => c.id === card.id)) {
           acc.push(card);
@@ -106,25 +139,30 @@ function MyCollectionPage() {
         return acc;
       }, []);
 
+      // Update state with unique owned cards
       setCards(uniqueCards);
     } catch (error) {
-      console.error("Error fetching owned cards:", error);
+      
     }
   };
 
   const handleEditToggle = () => {
     if (isEditing) {
-      fetchOwnedCards();  // Aktualisierte Werte erneut abrufen
+      // Reload owned cards when exiting edit mode
+      fetchOwnedCards();  
     }
+    // Toggle the edit mode
     setIsEditing(!isEditing);
   };
 
 
   const saveCardQuantity = async (cardId, normalQuantity, foilQuantity, setLocalQuantity, oldQuantity) => {
     try {
-        console.log("Sending data to API:", { card_id: cardId, normal_quantity: normalQuantity, foil_quantity: foilQuantity });
+        
+        // Set loading state while saving data
         setIsLoading(true);
 
+        // Send a POST request to update the owned card quantity
         const response = await fetch(`http://localhost:3000/cards/collection/add`, {
             method: "POST",
             headers: {
@@ -141,9 +179,10 @@ function MyCollectionPage() {
         const result = await response.json();
 
         if (!response.ok) {
+          // Handle specific API error responses with user feedback
             switch (result.code) {
                 case "CARD_IN_DECK":
-                    toast.error(t("error_card_in_deck"));  // Übersetzung des Fehlers
+                    toast.error(t("error_card_in_deck"));  
                     break;
                 case "USER_ID_MISSING":
                     toast.error(t("error_user_id_missing"));
@@ -158,73 +197,72 @@ function MyCollectionPage() {
         }
 
         toast.success(t("success_update"));
+        // Refresh the owned cards list after successful update
         fetchOwnedCards();
     } catch (error) {
-        console.error("Error saving card quantity:", error.message);
-        //toast.error(t("error_generic"));
-        setLocalQuantity(oldQuantity); // Setze den Wert auf den alten Zustand zurück
+        // If an error occurs, revert the local UI state to the previous value
+        setLocalQuantity(oldQuantity); 
     } finally {
+        // Reset loading state after request completes
         setIsLoading(false);
     }
-};
-
-// Normale Karten aktualisieren
-const updateOwnedQuantity = async (change) => {
-    const oldQuantity = ownedQuantity; // Speichere den aktuellen Wert
-    const newQuantity = Math.max(Number(ownedQuantity) + change, 0);
-
-    setOwnedQuantity(newQuantity);  // UI sofort aktualisieren
-
-    await saveCardQuantity(selectedCard.id, newQuantity, foilQuantity, setOwnedQuantity, oldQuantity);
-};
-
-// Foil-Karten aktualisieren
-const updateFoilQuantity = async (change) => {
-    const oldQuantity = foilQuantity; // Speichere den aktuellen Wert
-    const newQuantity = Math.max(Number(foilQuantity) + change, 0);
-
-    setFoilQuantity(newQuantity);  // UI sofort aktualisieren
-
-    await saveCardQuantity(selectedCard.id, ownedQuantity, newQuantity, setFoilQuantity, oldQuantity);
-};
-
-const fetchDecksForCard = async (cardId) => {
-    try {
-        const response = await fetch(`http://localhost:3000/cards/collection/decks/${cardId}`, {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        });
-
-        if (!response.ok) {
-            throw new Error("Failed to fetch decks");
-        }
-
-        const data = await response.json();
-        console.log("data: ". data);
-        setDecks(data.decks || []);
-    } catch (error) {
-        console.error("Error fetching decks for card:", error);
-        setDecks([]);
-    }
-};
+  };
 
 
-  
-  
-  
-  
+  const updateOwnedQuantity = async (change) => {
+      const oldQuantity = ownedQuantity; // Store the current normal card quantity
+      const newQuantity = Math.max(Number(ownedQuantity) + change, 0);
+
+      setOwnedQuantity(newQuantity);  
+      // Save the new quantity to the backend and revert on failure
+      await saveCardQuantity(selectedCard.id, newQuantity, foilQuantity, setOwnedQuantity, oldQuantity);
+  };
+
+
+  const updateFoilQuantity = async (change) => {
+      const oldQuantity = foilQuantity; 
+      const newQuantity = Math.max(Number(foilQuantity) + change, 0);
+
+      setFoilQuantity(newQuantity);  
+      // Save the new quantity to the backend and revert on failure
+      await saveCardQuantity(selectedCard.id, ownedQuantity, newQuantity, setFoilQuantity, oldQuantity);
+  };
+
+  const fetchDecksForCard = async (cardId) => {
+      try {
+        // Send a GET request to fetch the decks that contain a specific card
+          const response = await fetch(`http://localhost:3000/cards/collection/decks/${cardId}`, {
+              method: "GET",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+          });
+
+          if (!response.ok) {
+              throw new Error("Failed to fetch decks");
+          }
+
+          const data = await response.json();
+          // Update the state with the fetched decks or set an empty array if none exist
+          setDecks(data.decks || []);
+      } catch (error) {
+          
+          setDecks([]);
+      }
+  };
+
   
 
   const openPopup = async (card) => {
-    console.log("Popup opened for card:", card);
+    
+    // Set the selected card and ensure foil display is initially false
     setSelectedCard({
       ...card,
-      showFoil: false,  // Standardmäßig Foil deaktiviert
+      showFoil: false,  
     });
  
     try {
         await fetchDecksForCard(card.id);
+         // Send a request to fetch the quantity of the selected card in the collection
         const response = await fetch(`http://localhost:3000/cards/collection/quantity/${card.id}`, {
         method: "GET",
         headers: {
@@ -238,21 +276,23 @@ const fetchDecksForCard = async (cardId) => {
       }
  
       const data = await response.json();
+      // Update state with the retrieved normal and foil card quantities
       setOwnedQuantity(Number(data.normal_quantity || 0));
       setFoilQuantity(Number(data.foil_quantity || 0));
     } catch (error) {
-      console.error("Error fetching card quantity:", error);
+      // Handle errors by resetting quantities to 0
       setOwnedQuantity(0);
       setFoilQuantity(0);
     }
- };
+  };
  
+  // Closes the popup by clearing the selected card
   const closePopup = () => setSelectedCard(null);
 
   return (
     <div className={styles.container}>
       <div className={styles.contentWrapper}>
-        <h1 className={styles.dashboardTitle}>{t("my_collection_title")}</h1>
+        <h1 className={styles.dashboardTitle}>{t("my_collection")}</h1>
 
         <div className={styles.statsContainer}>
           <p>{t("total_cards")}: {collectionStats.totalCards}</p>
@@ -368,6 +408,7 @@ const fetchDecksForCard = async (cardId) => {
                 className={`${styles.card} ${card.is_foil ? styles.foild : ""}`}
                 onClick={() => openPopup(card)}
                 >
+
                 <img src={card.thumbnail_url} alt={card.full_name} className={styles.cardImage} />
                 <p>{card.full_name}</p>
                 </div>
@@ -375,7 +416,7 @@ const fetchDecksForCard = async (cardId) => {
           </div>
 
         </div>
-      
+        
         {selectedCard && (
           <div className={styles.popupOverlay} onClick={closePopup}>
               <div className={`${styles.popup} ${styles["cart_popup"]}`}  onClick={(e) => e.stopPropagation()}>
@@ -389,7 +430,7 @@ const fetchDecksForCard = async (cardId) => {
                           checked={selectedCard?.showFoil || false}
                           onChange={() => {
                               setSelectedCard((prev) => {
-                              console.log("Toggle showFoil:", !prev.showFoil);
+                              
                               return { ...prev, showFoil: !prev.showFoil };
                               });
                           }}

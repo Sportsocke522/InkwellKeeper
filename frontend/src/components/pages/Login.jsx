@@ -1,14 +1,16 @@
-//importing necessary libraries for login function
-import { useEffect, useState } from "react"; //use state for state variables
-import axios from "axios"; //axios for communication with backend
-import { toast } from "sonner"; //sonner for toast notification
-//import styles from "../styles/Login.module.css"; //module css import
+
+import { useEffect, useState } from "react"; 
+import axios from "axios"; 
+import { toast } from "sonner";
+import styles from "../styles/App.module.css"; 
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
-//creation of the login component function
+import logo from "../styles/images/logo.png";
+
+
 function LoginPage() {
-  //declaring state varibles using use state
+  
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
@@ -16,21 +18,22 @@ function LoginPage() {
   const { t } = useTranslation();
 
   useEffect(() => {
-    document.title = t("login_page_title"); // Dynamically sets the page title
+     // Set the document title dynamically using translations
+    document.title = t("login") + " - " + t("inkwell"); 
   });
 
-  //login function with axios
+  // Handles user login when the form is submitted
   const handleLogin = async (e) => {
-    e.preventDefault(); // Prevents form reload
+    e.preventDefault();
 
     try {
-      // Check if all fields are filled
+      // Check if username or password fields are empty
       if (!username || username === "" || !password || password === "") {
         toast.warning(t("fields_required"));
-        return; // Exit function if a field is missing
+        return; 
       }
 
-      // Send login request to backend endpoint with credentials
+      // Send login request to the backend
       const res = await axios.post(
         "http://localhost:3000/auth/auth/login",
         {
@@ -38,19 +41,19 @@ function LoginPage() {
           password: password,
         },
         {
-          withCredentials: true, // Sends cookies with requests
+          withCredentials: true, 
         }
       );
 
-      // On successful login
+      
       if (res.status === 200) {
         console.log("Login successful, token is stored in cookie");
         toast.success(t("login_successful_redirecting"));
-        setUsername(""); // Reset username
-        setPassword(""); // Reset password
+        setUsername(""); 
+        setPassword(""); 
 
         console.log("Redirecting to dashboard");
-        navigate("/"); // Redirect to the homepage
+        navigate("/"); 
       }
     } catch (error) {
       console.error("Error Logging User: ", error);
@@ -58,54 +61,72 @@ function LoginPage() {
     }
   };
 
-  //bootstrap components
+  
   return (
     <>
-      <div className={"card"} id={styles.card}>
-        <div className={"card-body"}>
-          <h2 id={styles.h2}>{t("login")}</h2>
-          <hr />
-          <form onSubmit={handleLogin}>
-            {/* for Username */}
-            <div>
-              <label>{t("username_label")}</label>
-              <input
-                type="text"
-                name="username"
-                placeholder={t("username_placeholder")}
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
+      <div className={styles.container_login}>
+        <div className={styles.container_login_inner}>
+          <div className={styles.userSettingsWrapper}>
+            <div className={styles.settingsblock}>
+              
+              <div className={styles.loginlogoheader}>
+                <img src={logo} alt={`${t("inkwell")} ${t("logo")}`} />
+                <h1>{t("inkwell")}</h1>
+              </div>
+              <h2 id={styles.loginnHeandline}>{t("login")}</h2>
+              <form onSubmit={handleLogin}>
+                {/* for Username */}
+                <div className={styles.logininputblock}>
+                  <label>{t("username_label")}</label>
+                  <input
+                    type="text"
+                    name="username"
+                    placeholder={t("username_placeholder")}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className={styles.searchInput}
+                  />
+                </div>
+
+                {/* for Password */}
+                <div className={styles.logininputblock}>
+                  <label>{t("password_label")}</label>
+                  <input
+                    type="password"
+                    name="password"
+                    placeholder={t("password_placeholder")}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={styles.searchInput}
+                  />
+                </div>
+
+                {/* sign up */}
+                <div className={styles.LoginContainerControlls}>
+                  <a>
+                    <Link to="/signup">{t("signup_prompt")}</Link>
+                  </a>
+                </div>
+                {/* login */}
+                <div className={styles.LoginContainerControlls}>
+                  <button
+                    className={`${styles.btn} ${styles["btn-primary"]}`}
+                    id={styles.button}
+                    type="submit"
+                  >
+                    {t("login")}
+                  </button>
+                </div>
+              </form>
             </div>
-
-            {/* for Password */}
-            <div>
-              <label>{t("password_label")}</label>
-              <input
-                type="password"
-                name="password"
-                placeholder={t("password_placeholder")}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-
-            {/* sign up */}
-            <a>
-              <Link to="/signup">{t("signup_prompt")}</Link>
-            </a>
-
-            {/* login */}
-            <button
-              className={"btn btn-success"}
-              id={styles.button}
-              type="submit"
-            >
-              {t("login")}
-            </button>
-          </form>
+          </div>
         </div>
       </div>
+
+
+
+
+      
     </>
   );
 }

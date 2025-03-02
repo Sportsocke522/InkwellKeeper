@@ -2,7 +2,7 @@
 import "./components/styles/App.module.css";
 import LoginPage from "./components/pages/Login";
 import SignupPage from "./components/pages/Register";
-import SpecialPage from "./components/pages/Dashboard";
+import Dashboard from "./components/pages/Dashboard";
 import Setupwizard from "./components/pages/Setupwizard";
 import Catalog from "./components/pages/Catalog";
 import Page from "./components/pages/Page";
@@ -12,15 +12,23 @@ import MyCollectionPage from "./components/pages/MyCollectionPage";
 import FriendsCollection from "./components/pages/FriendsCollection";
 import Settings from "./components/pages/Settings";
 import Header from "./components/component/Header";
+import ProtectedRoute from "./components/component/ProtectedRoute"; 
 import { Toaster } from "sonner";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import i18n from "./i18n";
 import { useEffect } from "react"; // For loading language
+//import { useLocation } from "react-router-dom";
 //import LanguageSelector from "./components/LanguageSelector"; // Optional: Dropdown for manual selection
 
 // Main app function
 function App() {
   // Fetch and set the language from the server when the app starts
+
+  const hiddenHeaderRoutes = ["/login", "/signup"];
+
+  const location = useLocation();
+
+
   useEffect(() => {
     const fetchLanguage = async () => {
       try {
@@ -50,23 +58,32 @@ function App() {
       
 
       {/* Router setup */}
-      <Router>
-        <Header />
+     
+        
+
+      {!hiddenHeaderRoutes.includes(location.pathname) && <Header />}
+
         <Routes>
 
-          <Route path="/" element={<SpecialPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/Login" element={<LoginPage />} />
-          <Route path="/Setupwizard" element={<Setupwizard />} />
-          <Route path="/Catalog" element={<Catalog />} />
+          
+
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+
+        {/* Geschützte Routen */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/setupwizard" element={<Setupwizard />} />
+          <Route path="/catalog" element={<Catalog />} />
           <Route path="/decks" element={<DeckListPage />} />
           <Route path="/decks/:deckId" element={<DeckDetailPage />} />
-          <Route path="/MyCollection" element={<MyCollectionPage />} />
-          <Route path="/FriendsCollection" element={<FriendsCollection />} />
-          <Route path="/Settings" element={<Settings />} />
-          <Route path="*" element={<Page />} />
+          <Route path="/mycollection" element={<MyCollectionPage />} />
+          <Route path="/friendscollection" element={<FriendsCollection />} />
+          <Route path="/settings" element={<Settings />} />
+        </Route>
+          
         </Routes>
-      </Router>
+      
     </>
   );
 }

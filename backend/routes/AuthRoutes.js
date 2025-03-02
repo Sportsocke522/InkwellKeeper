@@ -3,7 +3,8 @@ const express = require("express")
 const router = express.Router()
 
 //importing controller functions from controller directory
-const {SignUpController, LoginController} = require("../controllers/AuthControllers")
+const {SignUpController, LoginController, check} = require("../controllers/AuthControllers")
+const authenticateToken = require("../middleware/authenticateToken"); // Middleware importieren
 
 //sign up route here
 router.post("/auth/signup", (req, res) => {
@@ -12,7 +13,9 @@ router.post("/auth/signup", (req, res) => {
 });
 
 //login route here
-router.post("/auth/login", LoginController)
+router.post("/auth/login", LoginController);
+
+router.get("/auth/check", authenticateToken, check);
 
 //exporting the routes here
 module.exports = router

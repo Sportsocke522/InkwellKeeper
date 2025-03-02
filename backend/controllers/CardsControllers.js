@@ -2,18 +2,21 @@
 const bcrypt = require("bcryptjs"); //for hashing user's password startWizzward
 const token = require("../utils/jwt");
 
+
+const debugging = false; 
+
 const get_all_cards = async (req, res) => {
     try {
-      // Datenbank auswählen
+      
       await req.pool.query("USE ??", [process.env.DB_DATABASE]);
   
-      // Aktuelle Sprache aus den Settings laden
+      
       const [languageResult] = await req.pool.query(
         "SELECT setting_value FROM settings WHERE setting_key = 'language' LIMIT 1"
       );
-      const language = languageResult[0]?.setting_value || 'en'; // Standard auf Englisch setzen
+      const language = languageResult[0]?.setting_value || 'en'; 
   
-      // Karteninformationen abrufen, mit Fallback auf Englisch
+      
       const [cards] = await req.pool.query(`
         SELECT 
           c.id,
@@ -48,12 +51,12 @@ const get_all_cards = async (req, res) => {
           c.set_code, c.number
       `, [language, language, language]);
   
-      // Falls keine Karten gefunden wurden
+     
       if (cards.length === 0) {
         return res.status(404).json({ message: "No cards found for the selected language" });
       }
   
-      // Karten-Daten strukturieren
+      
       return res.status(200).json({
         language,
         cards: cards.map(card => ({
@@ -79,7 +82,10 @@ const get_all_cards = async (req, res) => {
         })),
       });
     } catch (error) {
-      console.error("Fehler in der Funktion get_all_cards:", error);
+
+      if(debugging){
+        console.error("Error in the get_all_cards function:", error);
+      }
       return res.status(500).json({ message: "Internal Server Error" });
     }
   };
@@ -87,7 +93,10 @@ const get_all_cards = async (req, res) => {
   const get_filtered_cards = async (req, res) => {
     try {
         const { set_code, color, rarity, search, sort_by = 'id', sort_order = 'ASC' } = req.query;
-        console.log("Filterparameter:", { set_code, color, rarity, search, sort_by, sort_order });
+        if(debugging) {
+          console.log("Filter parameters:", { set_code, color, rarity, search, sort_by, sort_order });
+        }
+
 
         await req.pool.query("USE ??", [process.env.DB_DATABASE]);
 
@@ -96,16 +105,16 @@ const get_all_cards = async (req, res) => {
         );
         const language = languageResult[0]?.setting_value || 'en';
 
-        // Erlaubte Sortierfelder zur Sicherheit
+       
         const validSortFields = {
             id: 'c.id',
             cost: 'c.cost'
         };
 
-        // Erlaubte Sortierrichtungen
+        
         const validSortOrders = ['ASC', 'DESC'];
 
-        // Standardwerte setzen, falls ungültige Werte übergeben wurden
+       
         const sortField = validSortFields[sort_by] || 'c.id';
         const sortOrder = validSortOrders.includes(sort_order.toUpperCase()) ? sort_order.toUpperCase() : 'ASC';
 
@@ -173,12 +182,15 @@ const get_all_cards = async (req, res) => {
             `%${search || ''}%`,
         ];
 
-        console.log("SQL-Parameter:", params);
+        if(debugging) {
+          console.log("SQL parameters:", params);
+        }
+
 
         const [results] = await req.pool.query(query, params);
 
         if (results.length === 0) {
-            return res.status(200).json({ cards: [] }); // Leere Liste zurückgeben
+            return res.status(200).json({ cards: [] }); 
         }
 
         return res.status(200).json({
@@ -227,7 +239,7 @@ const get_all_cards = async (req, res) => {
 
         await req.pool.query("USE ??", [process.env.DB_DATABASE]);
 
-        // Bestehende Karten zählen
+         
         const [existingNormal] = await req.pool.query(
             `SELECT id FROM user_collections WHERE user_id = ? AND card_id = ? AND is_foil = 0`,
             [user_id, card_id]
@@ -238,9 +250,9 @@ const get_all_cards = async (req, res) => {
             [user_id, card_id]
         );
 
-        // **Normale Karten hinzufügen oder entfernen**
+        
         if (normal_quantity > existingNormal.length) {
-            // Neue normale Karten hinzufügen
+           
             const cardsToAdd = normal_quantity - existingNormal.length;
             for (let i = 0; i < cardsToAdd; i++) {
                 await req.pool.query(
@@ -249,7 +261,7 @@ const get_all_cards = async (req, res) => {
                 );
             }
         } else if (normal_quantity < existingNormal.length) {
-            // Prüfe, ob Karten in einem Deck verwendet werden
+            
             const [usedInDeck] = await req.pool.query(
                 `SELECT user_collection_id FROM deck_cards 
                  WHERE user_collection_id IN (
@@ -275,9 +287,9 @@ const get_all_cards = async (req, res) => {
             }
         }
 
-        // **Foil-Karten hinzufügen oder entfernen**
+         
         if (foil_quantity > existingFoil.length) {
-            // Neue Foil-Karten hinzufügen
+            
             const cardsToAdd = foil_quantity - existingFoil.length;
             for (let i = 0; i < cardsToAdd; i++) {
                 await req.pool.query(
@@ -286,7 +298,7 @@ const get_all_cards = async (req, res) => {
                 );
             }
         } else if (foil_quantity < existingFoil.length) {
-            // Prüfe, ob Foil-Karten in einem Deck verwendet werden
+            
             const [usedInDeck] = await req.pool.query(
                 `SELECT user_collection_id FROM deck_cards 
                  WHERE user_collection_id IN (
@@ -314,8 +326,8 @@ const get_all_cards = async (req, res) => {
 
         return res.status(200).json({ code: "SUCCESS" });
     } catch (error) {
-        console.error("Fehler in add_card_to_collection:", error);
-        return res.status(500).json({ code: "SERVER_ERROR" });
+      console.error("Error in add_card_to_collection:", error);
+      return res.status(500).json({ code: "SERVER_ERROR" });
     }
 };
 
@@ -341,7 +353,7 @@ const get_card_quantity = async (req, res) => {
 
         await req.pool.query("USE ??", [process.env.DB_DATABASE]);
 
-        // Anzahl der normalen und Foil-Karten zählen
+        
         const [results] = await req.pool.query(`
             SELECT 
                 SUM(CASE WHEN is_foil = 0 THEN 1 ELSE 0 END) AS normal_quantity,
@@ -379,6 +391,7 @@ const get_owned_cards = async (req, res) => {
         return res.status(200).json({ ownedCardIds });
     } catch (error) {
         console.error("Fehler in get_owned_cards:", error);
+
         return res.status(500).json({ message: "Internal Server Error" });
     }
 };
@@ -439,7 +452,7 @@ const get_owned_cards = async (req, res) => {
 
         await req.pool.query("USE ??", [process.env.DB_DATABASE]);
 
-        // Deck-Daten abrufen
+        
         const [deck] = await req.pool.query(
             "SELECT * FROM decks WHERE id = ? AND user_id = ?",
             [deck_id, user_id]
@@ -449,7 +462,7 @@ const get_owned_cards = async (req, res) => {
             return res.status(404).json({ message: "Deck not found" });
         }
 
-        // Karten des Decks abrufen
+        
         const [cards] = await req.pool.query(`
             SELECT 
                 dc.id AS deck_card_id,
@@ -539,8 +552,10 @@ const remove_card_from_deck = async (req, res) => {
       return res.status(403).json({ message: "Unauthorized to modify this deck" });
     }
 
-    console.log("Löschen Deck: ", deck_id);
-    console.log("Löschen collect: ", user_collection_id);
+    if(debugging) {
+      console.log("Löschen Deck: ", deck_id);
+      console.log("Löschen collect: ", user_collection_id);
+    }
 
     await req.pool.query(
       "DELETE FROM deck_cards WHERE deck_id = ? AND user_collection_id = ?",
@@ -691,7 +706,7 @@ const remove_card_from_deck = async (req, res) => {
 
         const { search, set_code, rarity, color, sort_by = "id", sort_order = "ASC" } = req.query;
 
-        // Sicherheitsprüfung für Sortierparameter, um SQL-Injection zu verhindern
+        
         const validSortFields = ["id", "cost"];
         const validSortOrders = ["ASC", "DESC"];
 
@@ -700,20 +715,20 @@ const remove_card_from_deck = async (req, res) => {
 
         await req.pool.query("USE ??", [process.env.DB_DATABASE]);
 
-        // Aktuelle Sprache aus den Einstellungen laden
+        
         const [languageResult] = await req.pool.query(
             "SELECT setting_value FROM settings WHERE setting_key = 'language' LIMIT 1"
         );
-        let language = languageResult[0]?.setting_value || 'en'; // Standard auf Englisch setzen
+        let language = languageResult[0]?.setting_value || 'en'; 
 
-        // Prüfen, ob die ermittelte Sprache in card_images existiert
+        
         const [languageExists] = await req.pool.query(
             "SELECT COUNT(*) AS count FROM card_images WHERE language = ?",
             [language]
         );
 
         if (languageExists[0].count === 0) {
-            language = 'en';  // Falls Sprache nicht vorhanden ist, auf 'en' setzen
+            language = 'en';  
         }
 
         const query = `
@@ -770,9 +785,9 @@ const remove_card_from_deck = async (req, res) => {
 
         const params = [
             user_id,
-            user_id,  // Für normal_quantity
-            user_id,  // Für foil_quantity
-            language, language, language,  // Für die Sprache
+            user_id,  
+            user_id,  
+            language, language, language,  
             user_id,
             search || '', `%${search || ''}%`, `%${search || ''}%`,
             set_code || '', set_code || '',
@@ -821,7 +836,8 @@ const remove_card_from_deck = async (req, res) => {
 
         return res.status(200).json({ decks });
     } catch (error) {
-        console.error("Fehler in get_decks_for_card:", error);
+        console.error("Error in get_decks_for_card:", error);
+
         return res.status(500).json({ message: "Interner Serverfehler" });
     }
 };
@@ -835,7 +851,7 @@ const get_friends_card_owners = async (req, res) => {
 
       await req.pool.query("USE ??", [process.env.DB_DATABASE]);
 
-      // Prüfe, ob die Einstellung 'seeFriends' aktiviert ist
+      
       const [setting] = await req.pool.query(
           "SELECT setting_value FROM settings WHERE setting_key = 'seeFriendsCollection' LIMIT 1"
       );
@@ -855,43 +871,47 @@ const get_friends_card_owners = async (req, res) => {
 
       return res.status(200).json({ cards: friendsCards });
   } catch (error) {
-      console.error("Fehler in get_friends_card_owners:", error);
-      return res.status(500).json({ message: "Interner Serverfehler" });
+    console.error("Error in get_friends_card_owners:", error);
+    return res.status(500).json({ message: "Interner Serverfehler" });
   }
 };
 
 const get_filtered_friends_collection = async (req, res) => {
   try {
-    console.log("Request received:", req.query);
+    if(debugging) {
+       console.log("Request received:", req.query);
+    }
 
     const user_id = req.user?.id;
     if (!user_id) {
-      console.warn("Fehler: Benutzer-ID fehlt.");
+      console.warn("Error: User ID is missing.");
       return res.status(400).json({ message: "Benutzer-ID fehlt" });
     }
 
     const { friend_id, search, set_code, rarity, color, sort_by = "id", sort_order = "ASC" } = req.query;
-    console.log("Filterparameter:", { friend_id, search, set_code, rarity, color, sort_by, sort_order });
+    if(debugging) {
+      console.log("Filter parameters:", { friend_id, search, set_code, rarity, color, sort_by, sort_order });
+    }
 
     await req.pool.query("USE ??", [process.env.DB_DATABASE]);
 
-    // Aktuelle Sprache aus den Einstellungen laden
+    
     const [languageResult] = await req.pool.query(
       "SELECT setting_value FROM settings WHERE setting_key = 'language' LIMIT 1"
     );
-    let language = languageResult[0]?.setting_value || 'en'; // Standard auf Englisch setzen
+    let language = languageResult[0]?.setting_value || 'en'; 
 
-    // Prüfen, ob die ermittelte Sprache in card_images existiert
+    
     const [languageExists] = await req.pool.query(
       "SELECT COUNT(*) AS count FROM card_images WHERE language = ?",
       [language]
     );
 
     if (languageExists[0].count === 0) {
-      language = 'en';  // Falls Sprache nicht vorhanden ist, auf 'en' setzen
+      language = 'en';  
     }
 
-    // Sicherheitsprüfung für Sortierparameter, um SQL-Injection zu verhindern
+    
     const validSortFields = ["id", "cost"];
     const validSortOrders = ["ASC", "DESC"];
 
@@ -933,7 +953,7 @@ const get_filtered_friends_collection = async (req, res) => {
     `;
 
     const params = [
-      language, language, language,  // Für die Sprache
+      language, language, language,   
       user_id,
       friend_id || '', friend_id || '',
       search || '', `%${search || ''}%`, `%${search || ''}%`,
@@ -942,12 +962,16 @@ const get_filtered_friends_collection = async (req, res) => {
       color || '', color || ''
     ];
 
-    console.log("SQL Query:", query);
-    console.log("Query Parameters:", params);
+    if(debugging) {
+      console.log("SQL Query:", query);
+      console.log("Query Parameters:", params);
+    }
 
     const [results] = await req.pool.query(query, params);
 
-    console.log("Query Results:", results);
+    if(debugging) {
+      console.log("Query Results:", results);
+    }
 
     if (results.length === 0) {
       return res.status(200).json({ cards: [] });
@@ -955,7 +979,7 @@ const get_filtered_friends_collection = async (req, res) => {
 
     return res.status(200).json({ cards: results });
   } catch (error) {
-    console.error("Fehler beim Filtern der Freunde-Sammlung:", error);
+    console.error("Error filtering the friends collection:", error);
     return res.status(500).json({ message: "Interner Serverfehler" });
   }
 };
@@ -965,18 +989,24 @@ const get_filtered_friends_collection = async (req, res) => {
 
 const get_all_users_except_current = async (req, res) => {
   try {
-    console.log("Anfrage erhalten für Benutzerliste außer aktuellem Benutzer.");
+    if(debugging) {
+       console.log("Request received for user list excluding current user.");
+    }
 
     const user_id = req.user?.id;
     if (!user_id) {
-      console.warn("Fehler: Benutzer-ID fehlt.");
+      console.warn("Error: User ID is missing.");
       return res.status(400).json({ message: "Benutzer-ID fehlt" });
     }
 
-    console.log(`Aktueller Benutzer: ${user_id}`);
+    if(debugging) {
+      console.log(`Current user: ${user_id}`);
+    }
 
     await req.pool.query("USE ??", [process.env.DB_DATABASE]);
-    console.log(`Datenbank gewechselt zu: ${process.env.DB_DATABASE}`);
+    if(debugging) {
+      console.log(`Database switched to: ${process.env.DB_DATABASE}`);
+    }
 
     const query = `
       SELECT id, username
@@ -985,21 +1015,27 @@ const get_all_users_except_current = async (req, res) => {
       ORDER BY username ASC
     `;
 
-    console.log("SQL-Abfrage wird ausgeführt:", query);
+    if(debugging) {
+      console.log("Executing SQL query:", query);
+    }
     const [users] = await req.pool.query(query, [user_id]);
 
-    console.log(`Abfrage erfolgreich. Anzahl der gefundenen Benutzer: ${users.length}`);
+    if(debugging) {
+      console.log(`Query successful. Number of users found: ${users.length}`);
+    }
 
     if (users.length === 0) {
-      console.warn("Warnung: Keine Benutzer gefunden.");
+      console.warn("Warning: No users found.");
       return res.status(404).json({ message: "Keine Benutzer gefunden" });
     }
 
-    console.log("Benutzerliste erfolgreich abgerufen:", users);
+    if(debugging) {
+      console.log("User list successfully retrieved:", users);
+    }
 
     return res.status(200).json({ users });
   } catch (error) {
-    console.error("Fehler beim Abrufen der Benutzerliste:", error);
+    console.error("Error retrieving user list:", error);
     return res.status(500).json({ message: "Interner Serverfehler", error: error.message });
   }
 };

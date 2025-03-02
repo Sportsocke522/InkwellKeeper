@@ -2,24 +2,29 @@
 const bcrypt = require("bcryptjs"); //for hashing user's password startWizzward
 const token = require("../utils/jwt");
 
+const debugging = false; 
+
 const fs = require('fs');
 const path = require('path');
 
 const is_ready = async (req, res) => {
   try {
-    // Aktuellen Benutzer ermitteln
-    const user = req.user; // Auth-Middleware erforderlich
-    console.log("Aktueller Benutzer is Ready:", user);
+    
+    const user = req.user; 
+
+    if(debugging){
+      console.log("Current user is Ready:", user);
+    }
 
     const userId = req.user?.id;
 
-    // Überprüfen, ob userId existiert
+    
     if (!userId) {
       return res.status(400).json({ message: "Benutzer-ID fehlt" });
     }
 
     await req.pool.query("USE ??", [process.env.DB_DATABASE]);
-    // Abrufen des `is_ready`-Status
+    
     const [settingsResult] = await req.pool.query(
       "SELECT setting_value FROM settings WHERE setting_key = 'is_ready' LIMIT 1"
     );
@@ -29,30 +34,32 @@ const is_ready = async (req, res) => {
     }
 
     return res.status(200).json({
-      is_ready: settingsResult[0].setting_value === "true", // Prüfe explizit den Wert
+      is_ready: settingsResult[0].setting_value === "true", 
     });
 
   } catch (error) {
-    console.error("Fehler in der startWizzward-Funktion:", error); // Logge den genauen Fehler
+    console.error("Error in the startWizzward function:", error);
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
 const is_admin = async (req, res) => {
   try {
-    // Aktuellen Benutzer ermitteln
-    const user = req.user; // Auth-Middleware erforderlich
-    console.log("Aktueller Benutzer is Admin:", user);
+    
+    const user = req.user; 
+    if(debugging){
+      console.log("Current user is Admin:", user);
+    }
 
     const userId = req.user?.id;
 
-    // Überprüfen, ob userId existiert
+    
     if (!userId) {
       return res.status(400).json({ message: "Benutzer-ID fehlt" });
     }
 
     await req.pool.query("USE ??", [process.env.DB_DATABASE]);
-    // Überprüfen, ob der Benutzer Admin ist
+    
     const [userResult] = await req.pool.query(
       "SELECT `is_admin` FROM `users` WHERE `id` = ?",
       [userId]
@@ -65,14 +72,15 @@ const is_admin = async (req, res) => {
     const isAdmin = userResult[0].is_admin;
 
 
-    //}
+  
 
     return res.status(200).json({
-      //is_ready: settingsResult[0].is_ready,
+      
       is_admin: isAdmin,
     });
   } catch (error) {
-    console.error("Fehler in der is_admin-Funktion:", error); // Logge den genauen Fehler
+    console.error("Error in the is_admin function:", error);
+
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
@@ -80,19 +88,22 @@ const is_admin = async (req, res) => {
 
 const is_new_reg = async (req, res) => {
   try {
-    // Aktuellen Benutzer ermitteln
-    const user = req.user; // Auth-Middleware erforderlich
-    console.log("Aktueller Benutzer is new reg:", user);
+    
+    const user = req.user; 
+
+    if(debugging){
+      console.log("Current user is (new reg):", user);
+    }
 
     const userId = req.user?.id;
 
-    // Überprüfen, ob userId existiert
+    
     if (!userId) {
       return res.status(400).json({ message: "Benutzer-ID fehlt" });
     }
 
     await req.pool.query("USE ??", [process.env.DB_DATABASE]);
-    // Abrufen des `Allow Registration`-Status
+    
     const [settingsResult] = await req.pool.query(
       "SELECT setting_value FROM settings WHERE setting_key = 'allowRegistration' LIMIT 1;"
     );
@@ -100,13 +111,18 @@ const is_new_reg = async (req, res) => {
     if (settingsResult.length === 0) {
       return res.status(404).json({ message: "Settings not found" });
     }
-    console.log("settings Value: ", settingsResult[0].setting_value);
+
+    if(debugging){
+      console.log("settings Value: ", settingsResult[0].setting_value);
+    }
+
     return res.status(200).json({
-      is_new_reg: settingsResult[0].setting_value === "true", // Passe den Key an
+      is_new_reg: settingsResult[0].setting_value === "true", 
     });
 
   } catch (error) {
-    console.error("Fehler in der startWizzward-Funktion:", error); // Logge den genauen Fehler
+    console.error("Error in the startWizzward function:", error);
+
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
@@ -204,7 +220,7 @@ const set_game = async (req, res) => {
     );
 
     if (game === "Lorcana") {
-      // Tabellen erstellen
+     
       await req.pool.query(`
         CREATE TABLE IF NOT EXISTS cards (
           id INT PRIMARY KEY,
@@ -249,7 +265,7 @@ const set_game = async (req, res) => {
         );
       `);
 
-      // Benutzer-Sammlungstabelle aktualisieren
+      
       await req.pool.query(`
         CREATE TABLE IF NOT EXISTS user_collections (
           id INT PRIMARY KEY AUTO_INCREMENT,
@@ -260,7 +276,7 @@ const set_game = async (req, res) => {
         );
       `);
 
-      // Deck-Tabelle erstellen
+     
       await req.pool.query(`
         CREATE TABLE IF NOT EXISTS decks (
           id INT PRIMARY KEY AUTO_INCREMENT,
@@ -272,7 +288,7 @@ const set_game = async (req, res) => {
         );
       `);
 
-      // Deck-Karten-Tabelle erstellen
+      
       await req.pool.query(`
         CREATE TABLE IF NOT EXISTS deck_cards (
           id INT PRIMARY KEY AUTO_INCREMENT,
@@ -285,12 +301,19 @@ const set_game = async (req, res) => {
         );
       `);
 
-      console.log("🔽 Lade aktuelle JSON-Dateien herunter...");
+      if(debugging){
+        console.log("Downloading current JSON files...");
+      }
+
       await downloadCardData(req, { status: () => ({ json: () => {} }) });
-      console.log("✅ JSON-Dateien erfolgreich heruntergeladen.");
+
+      if(debugging){
+        console.log("JSON files downloaded successfully.");
+      }
 
 
-      // JSON-Dateien einlesen und importieren
+
+      
       const dirPath = path.join(__dirname, '../games/lorcana');
       const files = fs.readdirSync(dirPath).filter(file => file.endsWith('.json'));
       
@@ -301,7 +324,7 @@ const set_game = async (req, res) => {
         const language = data.metadata.language;
       
         for (const card of data.cards) {
-          // --- 1. Karten prüfen und einfügen ---
+          
           const [existingCard] = await req.pool.query(
             "SELECT id FROM cards WHERE id = ? LIMIT 1",
             [card.id]
@@ -317,7 +340,7 @@ const set_game = async (req, res) => {
             ]);
           }
       
-          // --- 2. Übersetzungen prüfen und einfügen ---
+          
           const [existingTranslation] = await req.pool.query(
             "SELECT id FROM card_translations WHERE card_id = ? AND language = ? LIMIT 1",
             [card.id, language]
@@ -331,7 +354,7 @@ const set_game = async (req, res) => {
               card.id, language, card.name, card.fullName, card.story, card.flavorText || '', card.fullText || ''
             ]);
           } else {
-            // Falls die Übersetzung bereits existiert, ein Update durchführen
+            
             await req.pool.query(`
               UPDATE card_translations 
               SET name = ?, full_name = ?, story = ?, flavor_text = ?, full_text = ?
@@ -341,7 +364,7 @@ const set_game = async (req, res) => {
             ]);
           }
       
-          // --- 3. Bilder prüfen und einfügen ---
+          
           const { full, thumbnail, foilMask } = card.images || {};
           const [existingImage] = await req.pool.query(
             "SELECT id FROM card_images WHERE card_id = ? AND language = ? LIMIT 1",
@@ -373,36 +396,40 @@ const set_game = async (req, res) => {
 
 const axios = require("axios");
 
-// Verzeichnis für die Kartendaten
+
 const DATA_DIR = path.join(__dirname, "../games/lorcana");
 
-// URLs für die JSON-Dateien
+
 const JSON_SOURCES = {
   en: "https://lorcanajson.org/files/current/en/allCards.json",
   fr: "https://lorcanajson.org/files/current/fr/allCards.json",
   de: "https://lorcanajson.org/files/current/de/allCards.json"
 };
 
-// Funktion zum Herunterladen der JSON-Dateien
+
 const downloadCardData = async (req, res) => {
   try {
-    // Stelle sicher, dass das Verzeichnis existiert
+    
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
 
-    // Lade alle verfügbaren JSON-Dateien herunter
+    
     for (const [lang, url] of Object.entries(JSON_SOURCES)) {
       const filePath = path.join(DATA_DIR, `allCards_${lang}.json`);
       const response = await axios.get(url, { responseType: "arraybuffer" });
 
       fs.writeFileSync(filePath, response.data);
-      console.log(`JSON-Datei (${lang}) erfolgreich gespeichert:`, filePath);
+      if(debugging){
+        console.log(`JSON file (${lang}) successfully saved:`, filePath);
+      }
+
     }
 
     return res.status(200).json({ message: "Kartendaten erfolgreich aktualisiert." });
   } catch (error) {
-    console.error("Fehler beim Herunterladen der Kartendaten:", error);
+    console.error("Error downloading card data:", error);
+
     return res.status(500).json({ message: "Fehler beim Herunterladen der Kartendaten." });
   }
 };
@@ -412,25 +439,29 @@ const downloadCardData = async (req, res) => {
 
 const set_setup_wizard = async (req, res) => {
   try {
-    // Aktuellen Benutzer ermitteln
-    const user = req.user; // Auth-Middleware erforderlich
-    console.log("Aktueller Benutzer setup wizzard:", user);
+    
+    const user = req.user; 
+
+    if(debugging){
+      console.log("Current user (setup wizard):", user);
+    }
+
 
     const userId = req.user?.id;
 
-    // Überprüfen, ob userId existiert
+    
     if (!userId) {
       return res.status(400).json({ message: "Benutzer-ID fehlt" });
     }
 
     await req.pool.query("USE ??", [process.env.DB_DATABASE]);
 
-    // Update den `is_ready`-Status auf true
+    
     const [updateResult] = await req.pool.query(
       "UPDATE settings SET setting_value = 'true' WHERE setting_key = 'is_ready'"
     );
 
-    // Überprüfen, ob das Update erfolgreich war
+    
     if (updateResult.affectedRows === 0) {
       return res.status(404).json({ message: "Fehler beim Setzen des is_ready-Status" });
     }
@@ -440,7 +471,8 @@ const set_setup_wizard = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Fehler in der set_setup_wizard-Funktion:", error);
+    console.error("Error in the set_setup_wizard function:", error);
+
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
@@ -488,7 +520,7 @@ const set_seeFriends = async (req, res) => {
 
 
 
-// Benutzernamen abrufen
+
 const get_username = async (req, res) => {
   try {
     const userId = req.user?.id;
@@ -509,32 +541,39 @@ const get_username = async (req, res) => {
 
     return res.status(200).json({ username: result[0].username });
   } catch (error) {
-    console.error("Fehler beim Abrufen des Benutzernamens:", error);
+    console.error("Error fetching username:", error);
+
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
-// Benutzernamen aktualisieren
+
 const set_username = async (req, res) => {
   try {
     const userId = req.user?.id;
     const { username } = req.body;
 
     if (!userId || !username) {
-      console.log("Fehlende Daten:", { userId, username });
+      if(debugging){
+       console.log("Missing data:", { userId, username });
+      }
+
       return res.status(400).json({ message: "Benutzer-ID oder Benutzername fehlt" });
     }
 
     await req.pool.query("USE ??", [process.env.DB_DATABASE]);
 
-    // Überprüfen, ob der Benutzername bereits existiert
+    
     const [existingUser] = await req.pool.query(
       "SELECT id FROM users WHERE username = ? AND id != ?",
       [username, userId]
     );
 
     if (existingUser.length > 0) {
-      console.log("Benutzername existiert bereits:", username);
+      if(debugging){
+        console.log("Username already exists:", username);
+      }
+
       return res.status(400).json({ message: "Benutzername bereits vergeben" });
     }
 
@@ -544,20 +583,27 @@ const set_username = async (req, res) => {
     );
 
     if (updateResult.affectedRows === 0) {
-      console.log("Kein Datensatz aktualisiert");
+      if(debugging){
+        console.log("No record updated");
+      }
+
       return res.status(404).json({ message: "Benutzer nicht gefunden oder keine Änderungen" });
     }
 
-    console.log("Benutzername erfolgreich aktualisiert:", username);
+    if(debugging){
+      console.log("Username successfully updated:", username);
+    }
+
     return res.status(200).json({ message: "Benutzername erfolgreich aktualisiert" });
   } catch (error) {
-    console.error("Fehler beim Aktualisieren des Benutzernamens:", error);
+    console.error("Error updating username:", error);
+
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
 
-// Passwort aktualisieren
+
 const set_password = async (req, res) => {
   try {
     const userId = req.user?.id;
@@ -567,7 +613,7 @@ const set_password = async (req, res) => {
       return res.status(400).json({ message: "Benutzer-ID oder Passwort fehlt" });
     }
 
-    // Passwort-Hashing mit bcrypt
+    
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -580,7 +626,8 @@ const set_password = async (req, res) => {
 
     return res.status(200).json({ message: "Passwort erfolgreich aktualisiert" });
   } catch (error) {
-    console.error("Fehler beim Aktualisieren des Passworts:", error);
+    console.error("Error updating password:", error);
+
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };

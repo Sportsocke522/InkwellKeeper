@@ -18,7 +18,7 @@ services:
       - DB_NAME=inkwell
     depends_on:
       mysql:
-        condition: service_healthy   # Wartet, bis der MySQL-Container gesund ist
+        condition: service_healthy   
 
 
 

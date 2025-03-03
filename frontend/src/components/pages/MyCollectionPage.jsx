@@ -8,7 +8,13 @@ import placeholder from "../styles/images/card_placeholder.png";
 function MyCollectionPage() {
   const { t } = useTranslation();
 
-  const API_URL = `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`;
+  const useBackendPort = import.meta.env.VITE_USE_BACKEND_PORT === "true";
+  const API_URL = useBackendPort
+    ? `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`
+    : import.meta.env.VITE_BACKEND_URL;
+
+
+
 
   const [collectionStats, setCollectionStats] = useState({
     totalCards: 0,

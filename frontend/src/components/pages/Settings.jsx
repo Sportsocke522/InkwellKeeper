@@ -17,7 +17,13 @@ function Settings() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
-  const API_URL = `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`;
+  const useBackendPort = import.meta.env.VITE_USE_BACKEND_PORT === "true";
+  const API_URL = useBackendPort
+    ? `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`
+    : import.meta.env.VITE_BACKEND_URL;
+
+
+
 
   // Updates the user's username in the backend.
 // Sends a POST request with the new username and handles success or error feedback.

@@ -11,7 +11,9 @@ const dotenv = require("dotenv");
 const path = require("path");
 require("dotenv").config();
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
-const port = process.env.VITE_BACKEND_PORT || 3002;
+const useBackendPort = process.env.VITE_USE_BACKEND_PORT === "true";
+const port = useBackendPort ? process.env.VITE_BACKEND_PORT : 3002;
+
 
 
 
@@ -37,11 +39,22 @@ const bodyParser = require("body-parser");
 //app.use(cors());
 //app.options('*', cors(corsOptions)); // OPTIONS-Anfragen für CORS erlauben
 //app.use(cors(corsOptions));
+
+const useFrontendPort = process.env.VITE_USE_FRONTEND_PORT === "true";
+const frontendOrigin = useFrontendPort
+  ? `${process.env.VITE_FRONTEND_URL}:${process.env.VITE_FRONTEND_PORT}`
+  : process.env.VITE_FRONTEND_URL;
+
 const corsOptions = {
-  origin: `${process.env.VITE_FRONTEND_URL}:${process.env.VITE_FRONTEND_PORT}` || "http://localhost:5176",
-  credentials: true, // Cookies und andere credentials erlauben
-  allowedHeaders: ["Content-Type", "Authorization"], // Erlaube den Authorization-Header
+  origin: frontendOrigin || "http://localhost:5176",
+  credentials: true,
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
+
+
+
+
+
 app.use(cors(corsOptions));
 
 app.use(cookieParser());
@@ -74,7 +87,6 @@ let pool; // initialize the database connection pool
   app.listen(port, () => {
     console.log(`server running on http://localhost:${port}`);
 
-    console.log("test String");
-    console.log(process.env.VITE_FRONTEND_URL);
+    
   });
 })();

@@ -6,9 +6,10 @@ Inkwell Keeper is a self-hosted solution for digitally managing your Lorcana car
 ### Features
 - Digital collection management for Lorcana cards
 - Personal and shared collection browsing
-- Deck management
+- Deck management (currently only visible to the owner)
 - Ability to see which friends own specific cards (for potential trades)
 - Self-hosted solution with Docker-based deployment
+- Available in **English, German, and Spanish**
 
 ## Disclaimer
 This project is currently in a very early stage (v0.1). Feature requests and bug reports are highly welcome! Please submit issues on GitHub if you encounter any problems or have suggestions.
@@ -19,15 +20,20 @@ This project is currently in a very early stage (v0.1). Feature requests and bug
    git clone https://github.com/sportsocke522/InkwellKeeper.git
    cd InkwellKeeper
    ```
-2. Start the application using Docker:
+2. Configure the environment variables:
+   - Copy the `.env.example` file and rename it to `.env`.
+   - Adjust the ports or other variables if needed.
+
+3. Start the application using Docker:
    ```sh
    docker-compose up -d
    ```
-3. Default ports:
-   - Backend: `3000`
-   - Database: `3306`
-   - Frontend: `5173` (access the application via this port)
-4. Initial setup:
+4. Default ports (can be adjusted in `.env`):
+   - Backend: `3002`
+   - Database: `3003`
+   - Frontend: `3001` (access the application via this port)
+
+5. Initial setup:
    - Once all containers are running, open the frontend.
    - Register your first user (this user will automatically be set as admin).
    - After logging in, complete the setup wizard (a popup will guide you through the process).
@@ -51,11 +57,15 @@ A huge thanks to [lorcanajson.org](https://lorcanajson.org/) for providing the L
 Coming soon.
 
 ## Changelog
+### v0.11
+- .env support for port customizations 
+- update notification 
+
 ### v0.1
 - Initial release with core functionality:
   - Card collection management
   - Viewing friends' collections
-  - Deck management
+  - Deck management (private to the owner)
   - Basic user system
 
 ## Contributors

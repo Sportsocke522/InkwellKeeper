@@ -33,6 +33,9 @@ function SpecialPage() {
   // Hook for handling translations in the app
   const { t } = useTranslation();
 
+
+  const API_URL = `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`;
+
   useEffect(() => {
     // Set the document title dynamically using translations
     document.title = t("dashboard") + " - " + t("inkwell");
@@ -42,9 +45,9 @@ function SpecialPage() {
       try {
         // Fetch admin status, system readiness, and friends collection visibility in parallel
         const [adminRes, readyRes, seeFriendsRes] = await Promise.all([
-          fetch("http://localhost:3000/settings/is_admin", { credentials: "include" }),
-          fetch("http://localhost:3000/settings/is_ready", { credentials: "include" }),
-          fetch("http://localhost:3000/settings/get_seeFriends", { credentials: "include" })
+          fetch(`${API_URL}/settings/is_admin`, { credentials: "include" }),
+          fetch(`${API_URL}/settings/is_ready`, { credentials: "include" }),
+          fetch(`${API_URL}/settings/get_seeFriends`, { credentials: "include" })
         ]);
 
         if (!adminRes.ok || !readyRes.ok || !seeFriendsRes.ok) throw new Error("API Fehler");

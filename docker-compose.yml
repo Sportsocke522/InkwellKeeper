@@ -8,8 +8,9 @@ services:
     build:
       context: ./backend
     ports:
-      - "3000:3000"
-    
+      - "${VITE_BACKEND_PORT}:${VITE_BACKEND_PORT}"
+    env_file:
+      - .env
     environment:
       - DB_HOST=mysql
       - DB_PORT=3306
@@ -26,8 +27,9 @@ services:
     build:
       context: ./frontend
     ports:
-      - "5173:5173"
-    
+      - "${VITE_FRONTEND_PORT}:5173"
+    env_file:
+      - .env
     environment:
       - REACT_APP_BACKEND_URL=http://localhost:3000
     depends_on:
@@ -37,10 +39,10 @@ services:
     image: mysql:8.0
     container_name: mysql
     ports:
-      - "3306:3306"
+      - "${DATABASE_PORT}:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: secret
-      MYSQL_DATABASE: inkwell
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE:  ${DB_DATABASE}
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
@@ -49,7 +51,8 @@ services:
       retries: 5
       start_period: 30s
       timeout: 10s
-
+    env_file:
+      - .env
 
 volumes:
   mysql-data:

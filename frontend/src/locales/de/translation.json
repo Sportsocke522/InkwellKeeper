@@ -168,7 +168,9 @@
   "lorcana_github_url": "https://github.com/LorcanaJSON/LorcanaJSON",
   
   "enable_disable_registrations_desc": "Erlaubt neuen Nutzern, sich zu registrieren.",
-  "enable_disable_see_friends_desc": "Ermöglicht es dir, Sammlungen von Freunden zu sehen."
+  "enable_disable_see_friends_desc": "Ermöglicht es dir, Sammlungen von Freunden zu sehen.",
+  "update_available": "Update verfügbar",
+  "update_now": "Jetzt aktualisieren"
   
   
 

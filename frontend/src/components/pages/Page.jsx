@@ -7,6 +7,8 @@ import { useTranslation } from "react-i18next";
 function Page() {
   const { t } = useTranslation();
 
+  const API_URL = `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`;
+
   useEffect(() => {
     document.title = t("404_page_title") + " - " + t("inkwell"); 
   });

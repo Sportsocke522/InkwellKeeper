@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FaHome, FaBook, FaBookOpen, FaUsers, FaLayerGroup } from "react-icons/fa";
+import { FaGithub, FaExclamationTriangle } from "react-icons/fa";
 import styles from "../styles/App.module.css";
 import { useTranslation } from "react-i18next";
 import VERSION from "../../version";
+
+
+const GITHUB_REPO = "Sportsocke522/InkwellKeeper"; 
+const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
 
 
 const NavigationMenu = () => {
@@ -11,10 +16,14 @@ const NavigationMenu = () => {
   const [isSeeFriends, setIsSeeFriends] = useState(false);
   const { t } = useTranslation();
 
+  const [latestVersion, setLatestVersion] = useState(null);
+  
+  const API_URL = `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`;
+
   useEffect(() => {
     const fetchSeeFriendsStatus = async () => {
       try {
-        const response = await fetch("http://localhost:3000/settings/get_seeFriends", {
+        const response = await fetch(`${API_URL}/settings/get_seeFriends`, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -31,7 +40,22 @@ const NavigationMenu = () => {
       }
     };
 
+    const checkLatestVersion = async () => {
+      try {
+        const response = await fetch(GITHUB_API_URL);
+        if (!response.ok) {
+          throw new Error("Failed to fetch latest version");
+        }
+        const data = await response.json();
+        setLatestVersion(data.tag_name.replace(/^v/, "")); // Entfernt das "v" vorne, falls vorhanden
+      } catch (error) {
+        console.error("Error fetching latest version:", error);
+      }
+    };
+
     fetchSeeFriendsStatus();
+
+    checkLatestVersion();
   }, []);
 
   return (
@@ -70,6 +94,18 @@ const NavigationMenu = () => {
     
     <div className={styles.versionInfo}>
       v{VERSION}
+
+        {latestVersion && latestVersion !== VERSION && (
+          <p>
+            <FaExclamationTriangle style={{ marginRight: "5px" }} /> 
+            <strong>{t("update_available")}: </strong> v{latestVersion} <br />
+            <a href={`https://github.com/${GITHUB_REPO}/releases/latest`} target="_blank" rel="noopener noreferrer">
+              <FaGithub style={{ marginRight: "5px" }} />
+              {t("update_now")}
+            </a>
+          </p>
+        )}
+
     </div>
 
     </div>

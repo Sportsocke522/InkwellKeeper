@@ -167,7 +167,9 @@
   "lorcana_github_url": "https://github.com/LorcanaJSON/LorcanaJSON",
   
   "enable_disable_registrations_desc": "Allows new users to register.",
-  "enable_disable_see_friends_desc": "Allows you to see friends' collections."
+  "enable_disable_see_friends_desc": "Allows you to see friends' collections.",
   
+  "update_available": "Update available",
+  "update_now": "Update now"
   
 }

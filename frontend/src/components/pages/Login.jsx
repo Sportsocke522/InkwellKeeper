@@ -17,9 +17,13 @@ function LoginPage() {
 
   const { t } = useTranslation();
 
+  const API_URL = `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`;
+
   useEffect(() => {
      // Set the document title dynamically using translations
     document.title = t("login") + " - " + t("inkwell"); 
+
+    
   });
 
   // Handles user login when the form is submitted
@@ -35,7 +39,7 @@ function LoginPage() {
 
       // Send login request to the backend
       const res = await axios.post(
-        "http://localhost:3000/auth/auth/login",
+        `${API_URL}/auth/auth/login`,
         {
           username: username,
           password: password,

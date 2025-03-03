@@ -22,6 +22,8 @@ function DeckDetailPage() {
   const [deckCards, setDeckCards] = useState([]);
   const [availableCards, setAvailableCards] = useState([]);
 
+  const API_URL = `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`;
+
   useEffect(() => {
     // Set the document title dynamically using translations
     document.title = t("deck_details") + " - " + t("inkwell");
@@ -32,7 +34,7 @@ function DeckDetailPage() {
   const fetchDeckDetails = async () => {
     try {
       // Send a GET request to fetch deck details based on the deck ID
-      const response = await fetch(`http://localhost:3000/cards/decks/${deckId}`, {
+      const response = await fetch(`${API_URL}/cards/decks/${deckId}`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -58,7 +60,7 @@ function DeckDetailPage() {
   const fetchOwnedCards = async () => {
     try {
       // Send a GET request to retrieve the user's card collection
-      const response = await fetch(`http://localhost:3000/cards/collection`, {
+      const response = await fetch(`${API_URL}/cards/collection`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -85,7 +87,7 @@ function DeckDetailPage() {
   const updateDeckDetails = async () => {
     try {
       // Send a PUT request to update the deck details
-      await fetch(`http://localhost:3000/cards/decks/${deckId}/update`, {
+      await fetch(`${API_URL}/cards/decks/${deckId}/update`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -106,7 +108,7 @@ function DeckDetailPage() {
   const setDeckCoverImage = async (imagePath) => {
     try {
       // Send a PUT request to update the deck's cover image
-      await fetch(`http://localhost:3000/cards/decks/${deckId}/set_image`, {
+      await fetch(`${API_URL}/cards/decks/${deckId}/set_image`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -151,7 +153,7 @@ function DeckDetailPage() {
   const addCardsToDeck = async () => {
     try {
       // Send a POST request to add selected cards to the deck
-      await fetch(`http://localhost:3000/cards/decks/${deckId}/add_card`, {
+      await fetch(`${API_URL}/cards/decks/${deckId}/add_card`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -177,7 +179,7 @@ function DeckDetailPage() {
   const removeCardFromDeck = async (userCollectionId) => {
     try {
       // Send a DELETE request to remove a specific card from the deck
-      const response = await fetch(`http://localhost:3000/cards/decks/${deckId}/remove_card`, {
+      const response = await fetch(`${API_URL}/cards/decks/${deckId}/remove_card`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

@@ -5,9 +5,15 @@ const app = express();
 //importing database function
 const DBConn = require("./config/DBConn");
 
+
 //importing dotenv library
+const dotenv = require("dotenv");
+const path = require("path");
 require("dotenv").config();
-const port = process.env.PORT || 5000;
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+const port = process.env.VITE_BACKEND_PORT || 3002;
+
+
 
 const cookieParser = require("cookie-parser");
 
@@ -32,7 +38,7 @@ const bodyParser = require("body-parser");
 //app.options('*', cors(corsOptions)); // OPTIONS-Anfragen für CORS erlauben
 //app.use(cors(corsOptions));
 const corsOptions = {
-  origin: 'http://localhost:5173', // Erlaube nur diese Origin
+  origin: `${process.env.VITE_FRONTEND_URL}:${process.env.VITE_FRONTEND_PORT}` || "http://localhost:5176",
   credentials: true, // Cookies und andere credentials erlauben
   allowedHeaders: ["Content-Type", "Authorization"], // Erlaube den Authorization-Header
 };
@@ -67,5 +73,8 @@ let pool; // initialize the database connection pool
   //making the app run on specified port
   app.listen(port, () => {
     console.log(`server running on http://localhost:${port}`);
+
+    console.log("test String");
+    console.log(process.env.VITE_FRONTEND_URL);
   });
 })();

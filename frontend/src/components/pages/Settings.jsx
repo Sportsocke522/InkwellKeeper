@@ -17,12 +17,13 @@ function Settings() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
+  const API_URL = `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`;
 
   // Updates the user's username in the backend.
 // Sends a POST request with the new username and handles success or error feedback.
   const handleSaveUsername = async () => {
     try {
-      const response = await fetch("http://localhost:3000/settings/set_username", {
+      const response = await fetch(`${API_URL}/settings/set_username`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -44,7 +45,7 @@ function Settings() {
   // Sends a POST request with the new password and handles success or error feedback.
   const handleSavePassword = async () => {
     try {
-      const response = await fetch("http://localhost:3000/settings/set_password", {
+      const response = await fetch(`${API_URL}/settings/set_password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -71,7 +72,7 @@ function Settings() {
     i18n.changeLanguage(newLanguage); 
   
     try {
-      const response = await fetch("http://localhost:3000/settings/set_language", {
+      const response = await fetch(`${API_URL}/settings/set_language`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -92,7 +93,7 @@ function Settings() {
   // and then sending it back to the server to ensure the database is up to date.
   const handleUpdateDatebase = async () => {
     try {
-      const gameResponse = await fetch("http://localhost:3000/settings/get_game", {
+      const gameResponse = await fetch(`${API_URL}/settings/get_game`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -112,7 +113,7 @@ function Settings() {
         return;
       }
   
-      const updateResponse = await fetch("http://localhost:3000/settings/set_game", {
+      const updateResponse = await fetch(`${API_URL}/settings/set_game`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -141,11 +142,11 @@ function Settings() {
     const fetchSettings = async () => {
         try {
             const [adminRes, languageRes, regRes, friendsRes, userRes] = await Promise.all([
-                fetch("http://localhost:3000/settings/is_admin", { credentials: "include" }),
-                fetch("http://localhost:3000/settings/get_language", { credentials: "include" }),
-                fetch("http://localhost:3000/settings/is_new_reg", { credentials: "include" }),
-                fetch("http://localhost:3000/settings/get_seeFriends", { credentials: "include" }),
-                fetch("http://localhost:3000/settings/get_username", { credentials: "include" })
+                fetch(`${API_URL}/settings/is_admin`, { credentials: "include" }),
+                fetch(`${API_URL}/settings/get_language`, { credentials: "include" }),
+                fetch(`${API_URL}/settings/is_new_reg`, { credentials: "include" }),
+                fetch(`${API_URL}/settings/get_seeFriends`, { credentials: "include" }),
+                fetch(`${API_URL}/settings/get_username`, { credentials: "include" })
             ]);
 
             if (!adminRes.ok || !languageRes.ok || !regRes.ok || !friendsRes.ok || !userRes.ok) {

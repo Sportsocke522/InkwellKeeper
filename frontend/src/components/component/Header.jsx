@@ -15,12 +15,12 @@ const Header = () => {
   const menuRef = useRef(null);
   const { t } = useTranslation();
 
- 
+  const API_URL = `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`;
 
   useEffect(() => {
     const fetchUsername = async () => {
       try {
-        const response = await fetch("http://localhost:3000/settings/get_username", {
+        const response = await fetch(`${API_URL}/settings/get_username`, {
           credentials: "include",
         });
         if (response.ok) {

@@ -8,6 +8,8 @@ import placeholder from "../styles/images/card_placeholder.png";
 function MyCollectionPage() {
   const { t } = useTranslation();
 
+  const API_URL = `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`;
+
   const [collectionStats, setCollectionStats] = useState({
     totalCards: 0,
     uniqueCards: 0,
@@ -80,7 +82,7 @@ function MyCollectionPage() {
   const fetchCollectionStats = async () => {
     try {
       // Send a GET request to retrieve collection statistics
-      const response = await fetch("http://localhost:3000/cards/collection/stats", {
+      const response = await fetch(`${API_URL}/cards/collection/stats`, {
         method: "GET",
         credentials: "include",
       });
@@ -119,7 +121,7 @@ function MyCollectionPage() {
       }).toString();
 
       // Fetch the user's owned cards from the API
-      const response = await fetch(`http://localhost:3000/cards/collection?${queryParams}`, {
+      const response = await fetch(`${API_URL}/cards/collection?${queryParams}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -163,7 +165,7 @@ function MyCollectionPage() {
         setIsLoading(true);
 
         // Send a POST request to update the owned card quantity
-        const response = await fetch(`http://localhost:3000/cards/collection/add`, {
+        const response = await fetch(`${API_URL}/cards/collection/add`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -231,7 +233,7 @@ function MyCollectionPage() {
   const fetchDecksForCard = async (cardId) => {
       try {
         // Send a GET request to fetch the decks that contain a specific card
-          const response = await fetch(`http://localhost:3000/cards/collection/decks/${cardId}`, {
+          const response = await fetch(`${API_URL}/cards/collection/decks/${cardId}`, {
               method: "GET",
               headers: { "Content-Type": "application/json" },
               credentials: "include",
@@ -263,7 +265,7 @@ function MyCollectionPage() {
     try {
         await fetchDecksForCard(card.id);
          // Send a request to fetch the quantity of the selected card in the collection
-        const response = await fetch(`http://localhost:3000/cards/collection/quantity/${card.id}`, {
+        const response = await fetch(`${API_URL}/cards/collection/quantity/${card.id}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

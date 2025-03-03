@@ -20,6 +20,7 @@ function SetupWizard() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSeeFriends, setIsSeeFriends] = useState(null);
 
+  const API_URL = `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`;
   
 
   // Fetches initial system status when the setup wizard is loaded.
@@ -31,17 +32,17 @@ function SetupWizard() {
     const fetchInitialStatus = async () => {
       try {
         const [adminResponse, readyResponse, languageResponse] = await Promise.all([
-          fetch("http://localhost:3000/settings/is_admin", {
+          fetch(`${API_URL}/settings/is_admin`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
           }),
-          fetch("http://localhost:3000/settings/is_ready", {
+          fetch(`${API_URL}/settings/is_ready`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
           }),
-          fetch("http://localhost:3000/settings/get_language", {
+          fetch(`${API_URL}/settings/get_language`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
@@ -84,7 +85,7 @@ function SetupWizard() {
   // Updates the state based on the API response and handles errors.
   const fetchNewRegStatus = async () => {
     try {
-      const response = await fetch("http://localhost:3000/settings/is_new_reg", {
+      const response = await fetch(`${API_URL}/settings/is_new_reg`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -108,7 +109,7 @@ function SetupWizard() {
   // Updates the state based on the API response and handles errors.
   const fetchSeeFriendsStatus = async () => {
     try {
-      const response = await fetch("http://localhost:3000/settings/get_seeFriends", {
+      const response = await fetch(`${API_URL}/settings/get_seeFriends`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -137,7 +138,7 @@ function SetupWizard() {
 
       await i18n.changeLanguage(selectedLanguage); 
   
-      const languageResponse = await fetch("http://localhost:3000/settings/set_language", {
+      const languageResponse = await fetch(`${API_URL}/settings/set_language`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -145,7 +146,7 @@ function SetupWizard() {
       });
 
       
-      const gameResponse = await fetch("http://localhost:3000/settings/set_game", {
+      const gameResponse = await fetch(`${API_URL}/settings/set_game`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -181,7 +182,7 @@ function SetupWizard() {
   // Sends a request to update the system status and navigates to the home page.
   const finalizeSetup = async () => {
     try {
-      const response = await fetch("http://localhost:3000/settings/set_setup_wizard", {
+      const response = await fetch(`${API_URL}/settings/set_setup_wizard`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -289,7 +290,7 @@ function SetupWizard() {
                               setIsNewRegEnabled(newValue);
                               try {
                                 const response = await fetch(
-                                  "http://localhost:3000/settings/set_new_reg",
+                                  `${API_URL}/settings/set_new_reg`,
                                   {
                                     method: "POST",
                                     headers: { "Content-Type": "application/json" },
@@ -325,7 +326,7 @@ function SetupWizard() {
                               setIsSeeFriends(newValue);
                               try {
                                 const response = await fetch(
-                                  "http://localhost:3000/settings/set_seeFriends",
+                                  `${API_URL}/settings/set_seeFriends`,
                                   {
                                     method: "POST",
                                     headers: { "Content-Type": "application/json" },

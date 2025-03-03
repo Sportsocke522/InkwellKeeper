@@ -28,11 +28,13 @@ function App() {
 
   const location = useLocation();
 
+  const API_URL = `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`;
+
 
   useEffect(() => {
     const fetchLanguage = async () => {
       try {
-        const response = await fetch("http://localhost:3000/settings/get_language", {
+        const response = await fetch(`${API_URL}/settings/get_language`, {
           credentials: "include",
         });
         if (response.ok) {

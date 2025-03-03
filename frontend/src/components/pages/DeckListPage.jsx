@@ -16,7 +16,7 @@ function DeckListPage() {
   const [deckName, setDeckName] = useState("");
   const [deckDescription, setDeckDescription] = useState("");
 
-
+  const API_URL = `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`;
   
 
 
@@ -29,7 +29,7 @@ function DeckListPage() {
     // Fetch user admin status from the API
     const fetchUserStatus = async () => {
       try {
-        const response = await fetch("http://localhost:3000/settings/is_admin", {
+        const response = await fetch(`${API_URL}/settings/is_admin`, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -57,7 +57,7 @@ function DeckListPage() {
   // Fetch the list of decks from the API
   const fetchDecks = async () => {
     try {
-      const response = await fetch("http://localhost:3000/cards/decks", {
+      const response = await fetch(`${API_URL}/cards/decks`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -80,7 +80,7 @@ function DeckListPage() {
   // Create a new deck
   const createDeck = async () => {
     try {
-      const response = await fetch("http://localhost:3000/cards/decks/create", {
+      const response = await fetch(`${API_URL}/cards/decks/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

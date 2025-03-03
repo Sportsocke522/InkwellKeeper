@@ -26,6 +26,8 @@ function FriendsCollection() {
   const [ownedQuantity, setOwnedQuantity] = useState(0); 
   const [foilQuantity, setFoilQuantity] = useState(0); 
 
+  const API_URL = `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`;
+
   useEffect(() => {
     // Set the document title dynamically using translations
     document.title = t("friends_collection_title") + " - " + t("inkwell");
@@ -47,7 +49,7 @@ function FriendsCollection() {
   const fetchUserList = async () => {
     try {
       // Send a GET request to retrieve the list of friends
-      const response = await fetch("http://localhost:3000/cards/users/friends", {
+      const response = await fetch(`${API_URL}/cards/users/friends`, {
         method: "GET",
         credentials: "include",
       });
@@ -80,7 +82,7 @@ function FriendsCollection() {
       }).toString();
   
       // Fetch filtered cards from the API
-      const response = await fetch(`http://localhost:3000/cards/collection/friends/filtered?${queryParams}`, {
+      const response = await fetch(`${API_URL}/cards/collection/friends/filtered?${queryParams}`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -132,7 +134,7 @@ function FriendsCollection() {
 
     try {
       // Fetch the quantity of the selected card from the user's collection
-      const response = await fetch(`http://localhost:3000/cards/collection/quantity/${card.id}`, {
+      const response = await fetch(`${API_URL}/cards/collection/quantity/${card.id}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

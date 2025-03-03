@@ -4,10 +4,12 @@ import { Navigate, Outlet } from "react-router-dom";
 const ProtectedRoute = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
 
+  const API_URL = `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`;
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await fetch("http://localhost:3000/auth/auth/check", {
+        const response = await fetch(`${API_URL}/auth/auth/check`, {
           credentials: "include", // Sendet Cookies mit der Anfrage
         });
 

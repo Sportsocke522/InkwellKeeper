@@ -48,6 +48,11 @@ function CatalogPage() {
   const decrementFoil = () => setFoilQuantity((prev) => Math.max(prev - 1, 0));
 
 
+  const API_URL = `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`;
+
+  
+
+
   /* 
     Fetch filtered cards from the API based on selected filters
   */
@@ -66,8 +71,10 @@ function CatalogPage() {
         sort_order: sortOrder,
       }).toString();
 
+      console.log(API_URL);
+
       // Fetch data from the API with the constructed query parameters
-      const response = await fetch(`http://localhost:3000/cards/filtered?${queryParams}`, {
+      const response = await fetch(`${API_URL}/cards/filtered?${queryParams}`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -104,7 +111,7 @@ function CatalogPage() {
   const fetchOwnedCards = async () => {
     try {
       // Send a GET request to retrieve owned cards
-      const response = await fetch(`http://localhost:3000/cards/collection`, {
+      const response = await fetch(`${API_URL}/cards/collection`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -157,7 +164,7 @@ function CatalogPage() {
   const fetchFriendsCards = async () => {
     try {
       // Send a GET request to retrieve friends' card collections
-      const response = await fetch("http://localhost:3000/cards/collection/friends", {
+      const response = await fetch(`${API_URL}/cards/collection/friends`, {
         method: "GET",
         credentials: "include",
       });
@@ -194,12 +201,12 @@ function CatalogPage() {
       try {
         // Fetch both admin status and system readiness in parallel
         const [adminResponse, readyResponse] = await Promise.all([
-          fetch("http://localhost:3000/settings/is_admin", {
+          fetch(`${API_URL}/settings/is_admin`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
           }),
-          fetch("http://localhost:3000/settings/is_ready", {
+          fetch(`${API_URL}/settings/is_ready`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
@@ -232,7 +239,7 @@ function CatalogPage() {
      * Check if the user has enabled the "see friends' collection" setting
      */
     const checkSeeFriends = async () => {
-      const response = await fetch("http://localhost:3000/settings/get_seeFriends", {
+      const response = await fetch(`${API_URL}/settings/get_seeFriends`, {
         method: "GET",
         credentials: "include",
       });
@@ -285,7 +292,7 @@ function CatalogPage() {
   
     try {
       // Fetch the quantity of the selected card from the user's collection
-      const response = await fetch(`http://localhost:3000/cards/collection/quantity/${card.id}`, {
+      const response = await fetch(`${API_URL}/cards/collection/quantity/${card.id}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -315,7 +322,7 @@ function CatalogPage() {
       setIsLoading(true); // Set loading state while saving data
 
       // Send a request to update the owned card quantities
-      const response = await fetch(`http://localhost:3000/cards/collection/add`, {
+      const response = await fetch(`${API_URL}/cards/collection/add`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

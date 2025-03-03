@@ -18,9 +18,13 @@ function SignupPage() {
 
   const { t } = useTranslation();
 
+  const API_URL = `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`;
+
   useEffect(() => {
     // Set the document title dynamically using translations
     document.title = t("signup") + " - " + t("inkwell"); 
+
+    console.log(`${API_URL}/auth/auth/signup`);
   });
 
   // Handles user signup when the form is submitted
@@ -44,7 +48,7 @@ function SignupPage() {
       }
 
        // Send signup request to the backend
-      const res = await axios.post("http://localhost:3000/auth/auth/signup", {
+      const res = await axios.post(`${API_URL}/auth/auth/signup`, {
         username: username,
         email: email,
         password: password,

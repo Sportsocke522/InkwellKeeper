@@ -10,6 +10,8 @@ const UserMenu = ({ username }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
+  const API_URL = `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`;
+
   const toggleMenu = () => {
     setMenuOpen(!menuOpen);
   };

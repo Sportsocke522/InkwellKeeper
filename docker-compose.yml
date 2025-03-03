@@ -31,7 +31,7 @@ services:
     env_file:
       - .env
     environment:
-      - REACT_APP_BACKEND_URL=http://localhost:3000
+      - REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL}
     depends_on:
       - backend
 

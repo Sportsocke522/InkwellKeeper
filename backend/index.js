@@ -11,7 +11,10 @@ const dotenv = require("dotenv");
 const path = require("path");
 require("dotenv").config();
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
+
 const useBackendPort = process.env.VITE_USE_BACKEND_PORT === "true";
+const useFrontendPort = process.env.VITE_USE_FRONTEND_PORT === "true";
+
 const port = useBackendPort ? process.env.VITE_BACKEND_PORT : 3002;
 
 
@@ -40,16 +43,31 @@ const bodyParser = require("body-parser");
 //app.options('*', cors(corsOptions)); // OPTIONS-Anfragen für CORS erlauben
 //app.use(cors(corsOptions));
 
-const useFrontendPort = process.env.VITE_USE_FRONTEND_PORT === "true";
-const frontendOrigin = useFrontendPort
+
+const backendUrl = useBackendPort
+  ? `${process.env.VITE_BACKEND_URL}:${process.env.VITE_BACKEND_PORT}`
+  : process.env.VITE_BACKEND_URL;
+
+
+const frontendUrl = useFrontendPort
   ? `${process.env.VITE_FRONTEND_URL}:${process.env.VITE_FRONTEND_PORT}`
   : process.env.VITE_FRONTEND_URL;
 
+
+const allowedOrigins = [frontendUrl, backendUrl].filter(Boolean); 
+
 const corsOptions = {
-  origin: frontendOrigin || "http://localhost:5176",
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin.replace(/\/$/, ""))) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS policy blocks this origin: " + origin));
+    }
+  },
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization"],
 };
+
 
 
 

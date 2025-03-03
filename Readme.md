@@ -38,6 +38,25 @@ This project is currently in a very early stage (v0.1). Feature requests and bug
    - Register your first user (this user will automatically be set as admin).
    - After logging in, complete the setup wizard (a popup will guide you through the process).
 
+## Environment Variables
+Below are the most relevant environment variables that might need to be adjusted:
+
+### Backend
+- `VITE_BACKEND_PORT=3002` – The port on which the backend server runs.
+- `VITE_BACKEND_URL=http://localhost` – The address where the backend server is accessible. If using a reverse proxy, you can set this to `https://your-backend-domain.com`.
+- `VITE_USE_BACKEND_PORT=true` – If a reverse proxy handles port forwarding, set this to `false`.
+
+### Frontend
+- `VITE_FRONTEND_PORT=3001` – The port on which the frontend server runs.
+- `VITE_FRONTEND_URL=http://localhost` – The address where the frontend server is accessible. If using a reverse proxy, you can set this to `https://your-frontend-domain.com`.
+- `VITE_USE_FRONTEND_PORT=true` – If a reverse proxy handles port forwarding, set this to `false`.
+- `REACT_APP_BACKEND_URL=http://localhost:3002` – The full address of the backend. If a port is used, it must be included; otherwise, it can be omitted.
+
+### Database
+- `DATABASE_PORT=3003` – The port on which the database runs.
+
+These are not all available environment variables, but they are the most commonly changed ones.
+
 ## Detailed Description
 Inkwell Keeper enables users to maintain their Lorcana card collection in a structured and accessible way. While each user has their own collection, they can also browse through the collections of their friends, making it easier to track missing cards and consider potential trades. Additionally, the application offers deck-building capabilities, though currently, decks are only visible to their respective owners. Future updates will include features for sharing decks with friends.
 
@@ -57,9 +76,12 @@ A huge thanks to [lorcanajson.org](https://lorcanajson.org/) for providing the L
 Coming soon.
 
 ## Changelog
+### v0.12
+- bugfixes for use with a proxy server
+
 ### v0.11
-- .env support for port customizations 
-- update notification 
+- .env support for port customizations
+- update notification
 
 ### v0.1
 - Initial release with core functionality:

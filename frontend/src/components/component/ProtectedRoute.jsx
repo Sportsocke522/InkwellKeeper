@@ -4,7 +4,13 @@ import { Navigate, Outlet } from "react-router-dom";
 const ProtectedRoute = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
 
-  const API_URL = `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`;
+  const useBackendPort = import.meta.env.VITE_USE_BACKEND_PORT === "true";
+  const API_URL = useBackendPort
+    ? `${import.meta.env.VITE_BACKEND_URL}:${import.meta.env.VITE_BACKEND_PORT}`
+    : import.meta.env.VITE_BACKEND_URL;
+
+
+
 
   useEffect(() => {
     const checkAuth = async () => {

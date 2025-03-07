@@ -76,6 +76,10 @@ A huge thanks to [lorcanajson.org](https://lorcanajson.org/) for providing the L
 Coming soon.
 
 ## Changelog
+### v0.13
+- fix mobile css
+- implement PWA Support
+
 ### v0.12
 - bugfixes for use with a proxy server
 

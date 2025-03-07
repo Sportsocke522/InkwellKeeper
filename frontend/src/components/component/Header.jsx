@@ -100,7 +100,8 @@ const Header = () => {
         ref={menuRef}
         className={`${styles.sideSection} ${menuOpen ? styles.active : ""}`}
       >
-        <NavigationMenu />
+        <NavigationMenu closeMenu={() => setMenuOpen(false)} />
+
       </div>
     </>
   );

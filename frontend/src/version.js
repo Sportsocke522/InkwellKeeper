@@ -1,3 +1,3 @@
-const VERSION = "0.12"; // Aktuelle Version hier verwalten
+const VERSION = "0.13"; // Aktuelle Version hier verwalten
 
 export default VERSION;

@@ -11,7 +11,7 @@ const GITHUB_REPO = "Sportsocke522/InkwellKeeper";
 const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
 
 
-const NavigationMenu = () => {
+const NavigationMenu  = ({ closeMenu }) => {
   const location = useLocation();
   const [isSeeFriends, setIsSeeFriends] = useState(false);
   const { t } = useTranslation();
@@ -69,29 +69,29 @@ const NavigationMenu = () => {
     <nav className={styles.nav}>
       <ul className={styles.menuList}>
         <li className={location.pathname === "/" ? styles.active : ""}>
-          <Link to="/">
+          <Link to="/" onClick={closeMenu}>
             <FaHome /> {t("nav_home")}
           </Link>
         </li>
         <li className={location.pathname === "/MyCollection" ? styles.active : ""}>
-          <Link to="/MyCollection">
+          <Link to="/MyCollection" onClick={closeMenu}>
             <FaBookOpen /> {t("nav_my_collection")}
           </Link>
         </li>
         <li className={location.pathname === "/decks" ? styles.active : ""}>
-          <Link to="/decks">
+          <Link to="/decks" onClick={closeMenu}>
             <FaLayerGroup /> {t("nav_decks")}
           </Link>
         </li>
         {isSeeFriends && (
           <li className={location.pathname === "/FriendsCollection" ? styles.active : ""}>
-            <Link to="/FriendsCollection">
+            <Link to="/FriendsCollection" onClick={closeMenu}>
               <FaUsers /> {t("nav_friends")}
             </Link>
           </li>
         )}
         <li className={location.pathname === "/catalog" ? styles.active : ""}>
-          <Link to="/catalog">
+          <Link to="/catalog" onClick={closeMenu}>
             <FaBook /> {t("nav_catalog")}
           </Link>
         </li>

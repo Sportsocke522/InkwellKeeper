@@ -245,9 +245,12 @@ function DeckDetailPage() {
                     </>
                   )}
                   {isEditing ? (
+                    <>
+                    <br />
                     <button onClick={() => { setShowAddCardsPopup(true); fetchOwnedCards(); }} className={`${styles.btn} ${styles["btn-primary"]}`}>
                       {t("add_cards")}
                     </button>
+                    </>
                   ) : null }
 
                   <p className={`${styles.deckcartcount} ${isEditing ? styles.is_editing : ""}`}>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { FaHome, FaBook, FaBookOpen, FaUsers, FaLayerGroup } from "react-icons/fa";
+import { FaHome, FaBook, FaBookOpen, FaUsers, FaLayerGroup   } from "react-icons/fa";
+import { BiScan } from "react-icons/bi";
 import { FaGithub, FaExclamationTriangle } from "react-icons/fa";
 import styles from "../styles/App.module.css";
 import { useTranslation } from "react-i18next";
@@ -93,6 +94,11 @@ const NavigationMenu  = ({ closeMenu }) => {
         <li className={location.pathname === "/catalog" ? styles.active : ""}>
           <Link to="/catalog" onClick={closeMenu}>
             <FaBook /> {t("nav_catalog")}
+          </Link>
+        </li>
+        <li className={location.pathname === "/scanner" ? styles.active : ""}>
+          <Link to="/scanner" onClick={closeMenu}>
+            <BiScan   /> {t("nav_scanner")}
           </Link>
         </li>
       </ul>

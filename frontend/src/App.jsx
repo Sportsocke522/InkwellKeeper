@@ -13,6 +13,7 @@ import FriendsCollection from "./components/pages/FriendsCollection";
 import Settings from "./components/pages/Settings";
 import Header from "./components/component/Header";
 import ProtectedRoute from "./components/component/ProtectedRoute"; 
+import ScannerPage from "./components/pages/ScannerPage";
 import { Toaster } from "sonner";
 import { Routes, Route, useLocation } from "react-router-dom";
 import i18n from "./i18n";
@@ -88,6 +89,7 @@ function App() {
           <Route path="/mycollection" element={<MyCollectionPage />} />
           <Route path="/friendscollection" element={<FriendsCollection />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/scanner" element={<ScannerPage />} />
         </Route>
           
         </Routes>

@@ -1,291 +1,212 @@
-import React, { useRef, useState, useEffect } from "react";
-import Webcam from "react-webcam";
-import Tesseract from "tesseract.js";
-import styles from "../styles/App.module.css";
+import { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import Tesseract from "tesseract.js"; // OCR für Texterkennung
+import styles from "../styles/App.module.css";
 
 const ScannerPage = () => {
-  const webcamRef = useRef(null);
-  const [detectedText, setDetectedText] = useState("Scanne...");
   const { t } = useTranslation();
-  const [isOpenCVReady, setIsOpenCVReady] = useState(false);
-  const [boundingBox, setBoundingBox] = useState(null); // Roter Rahmen
-  const [roiBox, setRoiBox] = useState(null); // Grüner Rahmen
+  const navigate = useNavigate();
+  const scanProvider = import.meta.env.VITE_SCANN_PROVIDER;
+  const [showPopup, setShowPopup] = useState(true);
+  const [torchActive, setTorchActive] = useState(false);
+  const [torchAvailable, setTorchAvailable] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [sensitivity, setSensitivity] = useState(15); // Erhöhte Sensitivität für weniger Trigger
+  const [scannedCards, setScannedCards] = useState([]);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const canvasRef = useRef(null);
+  const previousImageDataRef = useRef(null);
+  const lastRequestTimeRef = useRef(0); // Letzte API-Anfrage-Zeitpunkt
 
-  // OpenCV laden
-  const loadOpenCV = async () => {
-    if (window.cv && window.cv.getBuildInformation) {
-      console.log("OpenCV ist bereits vollständig geladen!");
-      setIsOpenCVReady(true);
-      return;
-    }
-
-    return new Promise((resolve, reject) => {
-      let script = document.createElement("script");
-      script.src = window.location.origin + "/opencv.js";
-      script.async = true;
-
-      script.onload = () => {
-        console.log("OpenCV.js wurde geladen, warte auf Initialisierung...");
-        
-        let checkCount = 0;
-        let checkOpenCV = setInterval(() => {
-          if (window.cv && window.cv.getBuildInformation) {
-            clearInterval(checkOpenCV);
-            console.log("OpenCV wurde erfolgreich initialisiert!");
-            setIsOpenCVReady(true);
-            resolve();
-          } else {
-            checkCount++;
-            console.log(`Prüfe OpenCV-Initialisierung... Versuch ${checkCount}`);
-            if (checkCount > 10) {
-              clearInterval(checkOpenCV);
-              console.error("OpenCV konnte nicht vollständig geladen werden.");
-              reject();
-            }
-          }
-        }, 500);
-      };
-
-      script.onerror = () => {
-        console.error("Fehler beim Laden von OpenCV.js");
-        reject();
-      };
-
-      document.body.appendChild(script);
-    });
-  };
+  const OPENAI_API_KEY = import.meta.env.VITE_AI_API;
 
   useEffect(() => {
-    loadOpenCV();
-  }, []);
+    document.title = t("scanner_title") + " - " + t("inkwell");
+
+    if (scanProvider === "none") {
+      navigate("/");
+    }
+  }, [scanProvider, navigate, t]);
 
   useEffect(() => {
-    if (isOpenCVReady) {
-      console.log("Starte automatisches Scannen...");
-      const interval = setInterval(scanImage, 2000);
-      return () => clearInterval(interval);
+    if (!showPopup) {
+      startCamera();
     }
-  }, [isOpenCVReady]);
+  }, [showPopup]);
 
-  const preprocessImage = (imageSrc, setBoundingBox, setRoiBox) => {
-    return new Promise((resolve) => {
-      let img = new Image();
-      img.src = imageSrc;
-  
-      img.onload = () => {
-        let canvas = document.createElement("canvas");
-        let ctx = canvas.getContext("2d");
-  
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0, img.width, img.height);
-  
-        let src = window.cv.imread(canvas);
-        let gray = new window.cv.Mat();
-        let blurred = new window.cv.Mat();
-        let thresh = new window.cv.Mat();
-        let contours = new window.cv.MatVector();
-        let hierarchy = new window.cv.Mat();
-  
-        // **1. Graustufen & Weichzeichnen**
-        window.cv.cvtColor(src, gray, window.cv.COLOR_RGBA2GRAY);
-        window.cv.GaussianBlur(gray, blurred, new window.cv.Size(5, 5), 0);
-  
-        // **2. Verbesserte Kantenerkennung**
-        window.cv.Canny(blurred, thresh, 50, 150);
-  
-        // **3. Konturen finden**
-        window.cv.findContours(thresh, contours, hierarchy, window.cv.RETR_EXTERNAL, window.cv.CHAIN_APPROX_SIMPLE);
-  
-        let maxArea = 0;
-        let bestContour = null;
-  
-        for (let i = 0; i < contours.size(); i++) {
-          let contour = contours.get(i);
-          let area = window.cv.contourArea(contour);
-  
-          if (area > maxArea) {
-            maxArea = area;
-            bestContour = contour;
-          }
-        }
-  
-        if (bestContour) {
-          let boundingRect = window.cv.boundingRect(bestContour);
-  
-          // **📌 Roter Rahmen um die erkannte Karte**
-          setBoundingBox({
-            x: boundingRect.x,
-            y: boundingRect.y,
-            width: boundingRect.width,
-            height: boundingRect.height
-          });
-  
-          // **📌 Verbesserte Skalierung für den Kartennamen**
-          let scaleFactor = boundingRect.width / 63.0; // Basierend auf Kartenbreite 63mm
-          let extraPadding = 5; // Größerer Bereich für OCR
-  
-          let roiX = Math.max(boundingRect.x + Math.round(scaleFactor * 3) - extraPadding, 0);
-          let roiY = Math.max(boundingRect.y + Math.round(scaleFactor * 46) - extraPadding, 0);
-          let roiWidth = Math.min(Math.round(scaleFactor * 40) + 2 * extraPadding, src.cols - roiX);
-          let roiHeight = Math.min(Math.round(scaleFactor * 10) + 2 * extraPadding, src.rows - roiY);
-  
-          // **🐞 Debugging: Prüfe ROI-Koordinaten**
-          console.log(`ROI Position: x=${roiX}, y=${roiY}, width=${roiWidth}, height=${roiHeight}`);
-  
-          // **4. Sicherstellen, dass die ROI-Werte gültig sind**
-          if (
-            roiX < 0 || roiY < 0 || 
-            roiX + roiWidth > src.cols || 
-            roiY + roiHeight > src.rows
-          ) {
-            console.warn("⚠️ ROI außerhalb der Bildgrenzen! Korrigiere Werte.");
-            resolve(null);
-            return;
-          }
-  
-          setRoiBox({ x: roiX, y: roiY, width: roiWidth, height: roiHeight });
-  
-          // **5. ROI für OCR ausschneiden**
-          let roi = src.roi(new window.cv.Rect(roiX, roiY, roiWidth, roiHeight));
-  
-          // Falls nicht kontinuierlich → Kopieren
-          if (!roi.isContinuous()) {
-            let temp = new window.cv.Mat();
-            roi.copyTo(temp);
-            roi = temp;
-          }
-  
-          // **6. Farbraum korrekt umwandeln (Fix für `cvtColor` Fehler)**
-          let roiGray = new window.cv.Mat();
-          if (roi.channels() === 3) {
-              window.cv.cvtColor(roi, roiGray, window.cv.COLOR_RGB2GRAY);
-          } else if (roi.channels() === 4) {
-              window.cv.cvtColor(roi, roiGray, window.cv.COLOR_RGBA2GRAY);
-          } else {
-              roiGray = roi.clone(); // Falls schon Graustufen, einfach klonen
-          }
-  
-          // **7. In RGBA umwandeln**
-          let rgba = new window.cv.Mat();
-          window.cv.cvtColor(roiGray, rgba, window.cv.COLOR_GRAY2RGBA);
-          roiGray.delete();
-  
-          // **8. Debug: Bild in die Konsole ausgeben**
-          let outputCanvas = document.createElement("canvas");
-          outputCanvas.width = roiWidth;
-          outputCanvas.height = roiHeight;
-          let outputCtx = outputCanvas.getContext("2d");
-  
-          try {
-            let bytes = rgba.data;
-            let imageData = new ImageData(
-              new Uint8ClampedArray(bytes.buffer, bytes.byteOffset, roiWidth * roiHeight * 4),
-              roiWidth,
-              roiHeight
-            );
-  
-            outputCtx.putImageData(imageData, 0, 0);
-            console.log("📸 OCR-Input-Bild:", outputCanvas.toDataURL());
-            resolve(outputCanvas.toDataURL());
-          } catch (error) {
-            console.error("❌ Fehler beim Erstellen von ImageData:", error);
-            resolve(null);
-          }
-  
-          // **9. Speicher freigeben**
-          src.delete();
-          gray.delete();
-          blurred.delete();
-          thresh.delete();
-          contours.delete();
-          hierarchy.delete();
-          roi.delete();
-          rgba.delete();
-        } else {
-          resolve(null);
-        }
-      };
-    });
-  };
-  
-  
-  
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" }
+      });
 
-  
-
-  const scanImage = async () => {
-    if (webcamRef.current) {
-      const imageSrc = webcamRef.current.getScreenshot();
-      if (imageSrc) {
-        const processedImage = await preprocessImage(imageSrc, setBoundingBox, setRoiBox);
-  
-        if (!processedImage) {
-          console.warn("⚠️ Kein gültiges Bild zum Scannen.");
-          return;
-        }
-  
-        const { data: { text } } = await Tesseract.recognize(processedImage, "eng", {
-          tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz -",
-          psm: 6,
-          logger: (m) => console.log(m),
-        });
-  
-        setDetectedText(text.trim());
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
       }
+      
+      streamRef.current = stream;
+
+      const track = stream.getVideoTracks()[0];
+      if (track.getCapabilities()?.torch) {
+        setTorchAvailable(true);
+      }
+
+      startImageDetection();
+    } catch (error) {
+      console.error("Fehler beim Zugriff auf die Kamera:", error);
     }
   };
-  
+
+  const toggleTorch = () => {
+    if (!streamRef.current) return;
+
+    const track = streamRef.current.getVideoTracks()[0];
+    const capabilities = track.getCapabilities();
+
+    if (capabilities.torch) {
+      const constraints = { advanced: [{ torch: !torchActive }] };
+      track.applyConstraints(constraints);
+      setTorchActive(!torchActive);
+    }
+  };
+
+  const startImageDetection = () => {
+    setInterval(() => {
+      if (!videoRef.current || !canvasRef.current) return;
+
+      const canvas = canvasRef.current;
+      const context = canvas.getContext("2d");
+
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+
+      context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
+      if (!previousImageDataRef.current) {
+        previousImageDataRef.current = imageData;
+        return;
+      }
+
+      const difference = calculateImageDifference(previousImageDataRef.current.data, imageData.data);
+
+      const now = Date.now();
+      if (difference > sensitivity && now - lastRequestTimeRef.current > 5000) {
+        console.log("⚡ Bild hat sich signifikant verändert! Jetzt OCR-Analyse starten.");
+        setScanning(true);
+        setTimeout(() => setScanning(false), 300);
+        previousImageDataRef.current = imageData;
+        lastRequestTimeRef.current = now; // Aktualisiere die letzte Anfrage-Zeit
+        extractTextWithOCR(canvas);
+      } else {
+        console.log("🛑 Anfrage blockiert - Mindestwartezeit noch nicht erreicht oder kein signifikanter Unterschied");
+      }
+    }, 1000); // Überprüfung nur alle 1000ms für weniger Last
+  };
+
+  const calculateImageDifference = (prevData, currData) => {
+    let diff = 0;
+    for (let i = 0; i < prevData.length; i += 4) {
+      diff += Math.abs(prevData[i] - currData[i]); 
+      diff += Math.abs(prevData[i + 1] - currData[i + 1]); 
+      diff += Math.abs(prevData[i + 2] - currData[i + 2]); 
+    }
+    return diff / (prevData.length / 4);
+  };
+
+  const extractTextWithOCR = async (canvas) => {
+    Tesseract.recognize(
+      canvas, 
+      "eng",
+      { logger: (m) => console.log(m) }
+    ).then(({ data: { text } }) => {
+      const cleanedText = text.replace(/\n/g, " ").trim(); // Zeilenumbrüche entfernen
+      console.log("📜 OCR-Ergebnis:", cleanedText);
+
+      if (cleanedText.length > 5) { // Nur sinnvolle Ergebnisse an OpenAI senden
+        sendToOpenAI(cleanedText);
+      } else {
+        console.log("🚫 OCR-Ergebnis zu kurz, wird verworfen.");
+      }
+    }).catch((error) => {
+      console.error("Fehler bei der OCR-Erkennung:", error);
+    });
+  };
+
+  const sendToOpenAI = async (cardText) => {
+    try {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4-turbo",
+          messages: [
+            { role: "system", content: "Du bist ein Assistent, der Lorcana-Kartennamen analysiert." },
+            { role: "user", content: `Extrahiere den Namen und den Namenszusatz aus diesem Lorcana-Kartentext: ${cardText}` },
+          ],
+          max_tokens: 50,
+        }),
+      });
+
+      const data = await response.json();
+      console.log("🔍 OpenAI Antwort:", data);
+
+      if (data.choices && data.choices.length > 0) {
+        const cardName = data.choices[0].message.content.trim();
+        setScannedCards((prev) => [...prev, cardName]);
+      }
+    } catch (error) {
+      console.error("Fehler beim OpenAI-Request:", error);
+    }
+  };
 
   return (
-    <div className={styles.container}>
-      <h1 className={styles.dashboardTitle}>{t("scanner_title") || "Karten Scanner"}</h1>
+    <>
+      <div className={styles.container}>
+        <div className={styles.contentWrapper}>
 
-      <div className={styles.webcamContainer} style={{ position: "relative" }}>
-        <Webcam
-          ref={webcamRef}
-          screenshotFormat="image/png"
-          videoConstraints={{ facingMode: "environment" }}
-          className={styles.webcam}
-        />
+          <h1>{t("scanner_title")}</h1>
 
-        {/* 🔴 Roter Rahmen → Ganze erkannte Karte */}
-        {boundingBox && (
-          <div
-            style={{
-              position: "absolute",
-              top: `${boundingBox.y}px`,
-              left: `${boundingBox.x}px`,
-              width: `${boundingBox.width}px`,
-              height: `${boundingBox.height}px`,
-              border: "2px solid red",
-              pointerEvents: "none",
-            }}
-          />
-        )}
+          {showPopup && (
+            <div className={styles.popup}>
+              <h2>📷 {t("scanner_popup_title")}</h2>
+              <p>{t("scanner_popup_text")}</p>
+              <button onClick={() => setShowPopup(false)}>{t("scanner_popup_ok")}</button>
+            </div>
+          )}
 
-        {/* 🟢 Grüner Rahmen → Bereich für den Kartennamen */}
-        {roiBox && (
-          <div
-            style={{
-              position: "absolute",
-              top: `${roiBox.y}px`,
-              left: `${roiBox.x}px`,
-              width: `${roiBox.width}px`,
-              height: `${roiBox.height}px`,
-              border: "2px solid green",
-              pointerEvents: "none",
-            }}
-          />
-        )}
+          {!showPopup && (
+            <div className={`${styles.cameraContainer} ${scanning ? styles.scanningEffect : ""}`}>
+              <video ref={videoRef} autoPlay playsInline></video>
+
+              {torchAvailable && (
+                <button className={styles.flashButton} onClick={toggleTorch}>
+                  {torchActive ? "🔦 Blitz aus" : "💡 Blitz an"}
+                </button>
+              )}
+            </div>
+          )}
+
+          <canvas ref={canvasRef} style={{ display: "none" }}></canvas>
+
+          <div className={styles.scannedCards}>
+            <h2>📋 Erkannte Karten:</h2>
+            <ul>
+              {scannedCards.map((card, index) => (
+                <li key={index}>{card}</li>
+              ))}
+            </ul>
+          </div>
+
+        </div>
       </div>
-
-      <div className={styles.detectedTextBox}>
-        <h2>Erkannter Text:</h2>
-        <p>{detectedText}</p>
-      </div>
-    </div>
+    </>
   );
 };
 

@@ -135,7 +135,8 @@ const ScannerPage = () => {
     }
     scanIntervalRef.current = setInterval(() => {
       if (!videoRef.current || !canvasRef.current) {
-        console.error("🚨 Video oder Canvas nicht verfügbar!");
+        console.error("🚨 Video oder Canvas nicht verfügbar! Stoppe den Scan-Loop.");
+        clearInterval(scanIntervalRef.current);
         return;
       }
       const video = videoRef.current;
@@ -229,10 +230,7 @@ const ScannerPage = () => {
       console.warn("Der aktuelle Provider wird nicht unterstützt:", scanProvider);
       return;
     }
-    // Entferne den Data-URL-Prefix, um nur den Base64-String zu erhalten.
     const base64Image = imageDataUrl.replace(/^data:image\/\w+;base64,/, "");
-    
-    // Verwende als kostengünstigstes Modell "gpt-4o-mini"
     const model = "gpt-4o-mini";
     const payload = {
       model: model,
@@ -244,12 +242,9 @@ const ScannerPage = () => {
       ],
       max_tokens: 50,
     };
-    
-    // Logge den kompletten Payload in der Konsole (inklusive des vollständigen Base64-Bildstrings)
+  
     console.log("Full Payload:", payload);
-    
-    // Zum Testen führen wir den fetch-Aufruf nicht aus, um Kosten zu sparen.
-    
+  
     try {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -259,13 +254,15 @@ const ScannerPage = () => {
         },
         body: JSON.stringify(payload),
       });
-      
+  
       if (!response.ok) {
         throw new Error(`API-Fehler: ${response.status}`);
       }
       const data = await response.json();
-      // Hier musst du anpassen, wie die Antwort von OpenAI strukturiert ist.
-      const extractedName = data.name + (data.additional ? " " + data.additional : "");
+      console.log("API Response:", data);
+  
+      // Verwende die typische Struktur der Chat-Completion-Antwort
+      const extractedName = data.choices?.[0]?.message?.content;
       console.log("Extrahierter Name:", extractedName);
       setScannedCards(prev => {
         if (!prev.includes(extractedName)) {
@@ -276,8 +273,8 @@ const ScannerPage = () => {
     } catch (error) {
       console.error("Fehler beim Senden an die OpenAI Vision API:", error);
     }
-    
   };
+  
   
   return (
     <div className={styles.container}>

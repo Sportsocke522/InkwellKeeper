@@ -1,70 +1,88 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import Tesseract from "tesseract.js"; // OCR für Texterkennung
 import styles from "../styles/App.module.css";
 
 const ScannerPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const scanProvider = import.meta.env.VITE_SCANN_PROVIDER;
+  const OPENAI_API_KEY = import.meta.env.VITE_AI_API;
+
+  // Popup- und Kamera-Zustände
   const [showPopup, setShowPopup] = useState(true);
   const [torchActive, setTorchActive] = useState(false);
   const [torchAvailable, setTorchAvailable] = useState(false);
-  const [scanning, setScanning] = useState(false);
-  const [sensitivity, setSensitivity] = useState(15); // Erhöhte Sensitivität für weniger Trigger
   const [scannedCards, setScannedCards] = useState([]);
+
+  // Referenzen für Video, Canvas und den Stream
   const videoRef = useRef(null);
-  const streamRef = useRef(null);
   const canvasRef = useRef(null);
-  const previousImageDataRef = useRef(null);
-  const lastRequestTimeRef = useRef(0); // Letzte API-Anfrage-Zeitpunkt
+  const streamRef = useRef(null);
 
-  const OPENAI_API_KEY = import.meta.env.VITE_AI_API;
+  // Interval-Referenz für den Scan-Loop
+  const scanIntervalRef = useRef(null);
+  // Für die Detektion signifikanter Bildänderungen im roten Bereich
+  const lastImageAvgRef = useRef(null);
 
+  // Einstellungen für den roten Rahmen (ganze Karte) als relative Werte
+  const [cardBox, setCardBox] = useState({
+    x: 0.10, 
+    y: 0.20, 
+    width: 0.80, 
+    height: 0.55,
+  });
+
+  // Beim Mount: Seitentitel setzen und Scanprovider prüfen
   useEffect(() => {
     document.title = t("scanner_title") + " - " + t("inkwell");
-
     if (scanProvider === "none") {
       navigate("/");
     }
   }, [scanProvider, navigate, t]);
 
+  
+
+  // Starte die Kamera, sobald das Popup angezeigt wird
   useEffect(() => {
-    if (!showPopup) {
+    if (showPopup) {
       startCamera();
     }
   }, [showPopup]);
 
+  // Kamera starten und Stream einrichten
   const startCamera = async () => {
     try {
+      console.log("🎥 Kamera wird gestartet...");
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment" }
       });
-
+      streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
-      
-      streamRef.current = stream;
-
+      // Prüfe, ob der Torch (Blitz) unterstützt wird
       const track = stream.getVideoTracks()[0];
       if (track.getCapabilities()?.torch) {
         setTorchAvailable(true);
       }
-
-      startImageDetection();
+      console.log("✅ Kamera erfolgreich gestartet!");
     } catch (error) {
-      console.error("Fehler beim Zugriff auf die Kamera:", error);
+      console.error("❌ Fehler beim Zugriff auf die Kamera:", error);
     }
   };
 
+  useEffect(() => {
+    if (!showPopup && streamRef.current && videoRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [showPopup]);
+
+  // Umschalten der Taschenlampe
   const toggleTorch = () => {
     if (!streamRef.current) return;
-
     const track = streamRef.current.getVideoTracks()[0];
     const capabilities = track.getCapabilities();
-
     if (capabilities.torch) {
       const constraints = { advanced: [{ torch: !torchActive }] };
       track.applyConstraints(constraints);
@@ -72,141 +90,232 @@ const ScannerPage = () => {
     }
   };
 
+  // Wird beim Klick auf "Start" aufgerufen: Popup ausblenden und Bildanalyse starten
+  const startScanning = () => {
+    console.log("📸 Start-Button gedrückt!");
+    setShowPopup(false);
+    // Kurze Verzögerung, damit die UI aktualisiert wird
+    setTimeout(() => {
+      console.log("🎥 Starte Bildanalyse...");
+      startImageDetection();
+    }, 1000);
+  };
+
+  // Berechnet den durchschnittlichen Grauwert eines Bildbereichs aus den ImageData
+  const computeAverageIntensity = (imageData) => {
+    const { data } = imageData;
+    let total = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      // Einfacher Durchschnitt aus R, G und B
+      const avg = (data[i] + data[i+1] + data[i+2]) / 3;
+      total += avg;
+    }
+    return total / (data.length / 4);
+  };
+
+  // Startet den Loop, der in regelmäßigen Abständen das Kamerabild analysiert
   const startImageDetection = () => {
-    setInterval(() => {
-      if (!videoRef.current || !canvasRef.current) return;
-
-      const canvas = canvasRef.current;
-      const context = canvas.getContext("2d");
-
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
-
-      context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-
-      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-
-      if (!previousImageDataRef.current) {
-        previousImageDataRef.current = imageData;
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+    }
+    scanIntervalRef.current = setInterval(() => {
+      if (!videoRef.current || !canvasRef.current) {
+        console.error("🚨 Video oder Canvas nicht verfügbar!");
         return;
       }
-
-      const difference = calculateImageDifference(previousImageDataRef.current.data, imageData.data);
-
-      const now = Date.now();
-      if (difference > sensitivity && now - lastRequestTimeRef.current > 5000) {
-        console.log("⚡ Bild hat sich signifikant verändert! Jetzt OCR-Analyse starten.");
-        setScanning(true);
-        setTimeout(() => setScanning(false), 300);
-        previousImageDataRef.current = imageData;
-        lastRequestTimeRef.current = now; // Aktualisiere die letzte Anfrage-Zeit
-        extractTextWithOCR(canvas);
-      } else {
-        console.log("🛑 Anfrage blockiert - Mindestwartezeit noch nicht erreicht oder kein signifikanter Unterschied");
+      const video = videoRef.current;
+      // Prüfen, ob die Video-Metadaten (Dimensionen) bereits geladen sind
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        console.warn("Video-Dimensionen noch nicht verfügbar, überspringe diese Iteration.");
+        return;
       }
-    }, 1000); // Überprüfung nur alle 1000ms für weniger Last
+      
+      const canvas = canvasRef.current;
+      const context = canvas.getContext("2d");
+      
+      // Canvas auf die Videogröße anpassen
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      // Videoframe zeichnen
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  
+      // Berechne den roten Bereich (gesamte Karte)
+      const redX = cardBox.x * canvas.width;
+      const redY = cardBox.y * canvas.height;
+      const redWidth = cardBox.width * canvas.width;
+      const redHeight = cardBox.height * canvas.height;
+  
+      let redImageData;
+      try {
+        redImageData = context.getImageData(redX, redY, redWidth, redHeight);
+      } catch (e) {
+        console.error("Fehler beim Auslesen des roten Bereichs:", e);
+        return;
+      }
+      
+      // Weiter mit Bildverarbeitung...
+      const currentAvg = computeAverageIntensity(redImageData);
+      const lastAvg = lastImageAvgRef.current;
+      const threshold = 10; 
+  
+      if (lastAvg === null || Math.abs(currentAvg - lastAvg) > threshold) {
+        lastImageAvgRef.current = currentAvg;
+        // Blauer Bereich: Namenszone
+        const blueX = (cardBox.x + cardBox.width * 0.015) * canvas.width;
+        const blueY = (cardBox.y + cardBox.height * 0.51) * canvas.height;
+        const blueWidth = cardBox.width * 0.70 * canvas.width;
+        const blueHeight = cardBox.height * 0.15 * canvas.height;
+  
+        let blueImageData;
+        try {
+          blueImageData = context.getImageData(blueX, blueY, blueWidth, blueHeight);
+        } catch (e) {
+          console.error("Fehler beim Auslesen des blauen Bereichs:", e);
+          return;
+        }
+        // Blauen Bereich als Bild exportieren
+        const blueCanvas = document.createElement("canvas");
+        blueCanvas.width = blueWidth;
+        blueCanvas.height = blueHeight;
+        const blueCtx = blueCanvas.getContext("2d");
+        blueCtx.putImageData(blueImageData, 0, 0);
+        const imageDataUrl = blueCanvas.toDataURL("image/png");
+  
+        sendToOpenAIVision(imageDataUrl);
+      } else {
+        console.log("Keine signifikante Änderung im roten Bereich festgestellt.");
+      }
+    }, 1000);
   };
+  
 
-  const calculateImageDifference = (prevData, currData) => {
-    let diff = 0;
-    for (let i = 0; i < prevData.length; i += 4) {
-      diff += Math.abs(prevData[i] - currData[i]); 
-      diff += Math.abs(prevData[i + 1] - currData[i + 1]); 
-      diff += Math.abs(prevData[i + 2] - currData[i + 2]); 
+  // Sendet den Bildausschnitt des blauen Bereichs an die OpenAI Vision API
+  const sendToOpenAIVision = async (imageDataUrl) => {
+    console.log("Sende Bild an OpenAI Vision API...");
+    if (scanProvider !== "openai") {
+      console.warn("Der aktuelle Provider wird nicht unterstützt:", scanProvider);
+      return;
     }
-    return diff / (prevData.length / 4);
-  };
-
-  const extractTextWithOCR = async (canvas) => {
-    Tesseract.recognize(
-      canvas, 
-      "eng",
-      { logger: (m) => console.log(m) }
-    ).then(({ data: { text } }) => {
-      const cleanedText = text.replace(/\n/g, " ").trim(); // Zeilenumbrüche entfernen
-      console.log("📜 OCR-Ergebnis:", cleanedText);
-
-      if (cleanedText.length > 5) { // Nur sinnvolle Ergebnisse an OpenAI senden
-        sendToOpenAI(cleanedText);
-      } else {
-        console.log("🚫 OCR-Ergebnis zu kurz, wird verworfen.");
-      }
-    }).catch((error) => {
-      console.error("Fehler bei der OCR-Erkennung:", error);
-    });
-  };
-
-  const sendToOpenAI = async (cardText) => {
+    // Entferne den Data-URL-Prefix, falls erforderlich, um nur den Base64-String zu erhalten.
+    const base64Image = imageDataUrl.replace(/^data:image\/\w+;base64,/, "");
+    
     try {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          "Authorization": `Bearer ${OPENAI_API_KEY}`,
         },
         body: JSON.stringify({
-          model: "gpt-4-turbo",
+          model: "gpt-4-turbo-2024-04-09",
           messages: [
-            { role: "system", content: "Du bist ein Assistent, der Lorcana-Kartennamen analysiert." },
-            { role: "user", content: `Extrahiere den Namen und den Namenszusatz aus diesem Lorcana-Kartentext: ${cardText}` },
+            {
+              role: "user",
+              content: `Was ist der Name und der Namenszusatz dieser Lorcana-Karte? Bild: data:image/jpeg;base64,${base64Image}`
+            }
           ],
           max_tokens: 50,
         }),
+        
       });
-
-      const data = await response.json();
-      console.log("🔍 OpenAI Antwort:", data);
-
-      if (data.choices && data.choices.length > 0) {
-        const cardName = data.choices[0].message.content.trim();
-        setScannedCards((prev) => [...prev, cardName]);
+      
+      if (!response.ok) {
+        throw new Error(`API-Fehler: ${response.status}`);
       }
+      const data = await response.json();
+      // Hier musst du anpassen, wie die Antwort von OpenAI strukturiert ist.
+      const extractedName = data.name + (data.additional ? " " + data.additional : "");
+      console.log("Extrahierter Name:", extractedName);
+      setScannedCards(prev => {
+        if (!prev.includes(extractedName)) {
+          return [...prev, extractedName];
+        }
+        return prev;
+      });
     } catch (error) {
-      console.error("Fehler beim OpenAI-Request:", error);
+      console.error("Fehler beim Senden an die OpenAI Vision API:", error);
     }
   };
+  
 
   return (
-    <>
-      <div className={styles.container}>
-        <div className={styles.contentWrapper}>
-
-          <h1>{t("scanner_title")}</h1>
-
-          {showPopup && (
-            <div className={styles.popup}>
-              <h2>📷 {t("scanner_popup_title")}</h2>
-              <p>{t("scanner_popup_text")}</p>
-              <button onClick={() => setShowPopup(false)}>{t("scanner_popup_ok")}</button>
+    <div className={styles.container}>
+      <div className={styles.contentWrapper}>
+        {showPopup ? (
+          <div className={styles.popup}>
+            <h2>📷 {t("scanner_popup_title")}</h2>
+            <p>Richte die Karte so aus, dass sie in den Rahmen passt.</p>
+            <div className={styles.cameraPreview} style={{ position: "relative" }}>
+              <video ref={videoRef} autoPlay playsInline style={{ width: "100%" }}></video>
+              {/* Roter Rahmen: Gesamte Karte */}
+              <div
+                className={styles.overlayBox}
+                style={{
+                  position: "absolute",
+                  top: `${cardBox.y * 100}%`,
+                  left: `${cardBox.x * 100}%`,
+                  width: `${cardBox.width * 100}%`,
+                  height: `${cardBox.height * 100}%`,
+                  border: "2px solid red",
+                }}
+              ></div>
+              {/* Blauer Rahmen: Namensbereich */}
+              <div
+                className={styles.overlayBox}
+                style={{
+                  position: "absolute",
+                  top: `${(cardBox.y + cardBox.height * 0.51) * 100}%`,
+                  left: `${(cardBox.x + cardBox.width * 0.015) * 100}%`,
+                  width: `${cardBox.width * 0.70 * 100}%`,
+                  height: `${cardBox.height * 0.15 * 100}%`,
+                  border: "2px solid blue",
+                }}
+              ></div>
             </div>
-          )}
-
-          {!showPopup && (
-            <div className={`${styles.cameraContainer} ${scanning ? styles.scanningEffect : ""}`}>
-              <video ref={videoRef} autoPlay playsInline></video>
-
-              {torchAvailable && (
-                <button className={styles.flashButton} onClick={toggleTorch}>
-                  {torchActive ? "🔦 Blitz aus" : "💡 Blitz an"}
-                </button>
-              )}
-            </div>
-          )}
-
-          <canvas ref={canvasRef} style={{ display: "none" }}></canvas>
-
-          <div className={styles.scannedCards}>
-            <h2>📋 Erkannte Karten:</h2>
-            <ul>
-              {scannedCards.map((card, index) => (
-                <li key={index}>{card}</li>
+            {/* Steuerung zur Anpassung des roten Rahmens */}
+            <div className={styles.adjustmentControls}>
+              {["x", "y", "width", "height"].map((key) => (
+                <div key={key}>
+                  <label>{key.toUpperCase()}:</label>
+                  <button onClick={() => setCardBox(prev => ({ ...prev, [key]: Math.max(prev[key] - 0.01, 0) }))}>-</button>
+                  {cardBox[key].toFixed(2)}
+                  <button onClick={() => setCardBox(prev => ({ ...prev, [key]: prev[key] + 0.01 }))}>+</button>
+                </div>
               ))}
-            </ul>
+            </div>
+            <button onClick={startScanning}>Start</button>
           </div>
+        ) : (
+          <div className={styles.cameraContainer} style={{ position: "relative" }}>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              onLoadedMetadata={() => {
+                console.log("Video-Metadaten geladen:", videoRef.current.videoWidth, videoRef.current.videoHeight);
+              }}
+              style={{ width: "100%" }}
+            ></video>
+            <canvas ref={canvasRef} style={{ display: "none" }}></canvas>
+            {torchAvailable && (
+              <button className={styles.flashButton} onClick={toggleTorch}>
+                {torchActive ? "🔦 Blitz aus" : "💡 Blitz an"}
+              </button>
+            )}
+          </div>
+        )}
 
+        <div className={styles.scannedCards}>
+          <h2>📋 Erkannte Karten:</h2>
+          <ul>
+            {scannedCards.map((card, index) => (
+              <li key={index}>{card}</li>
+            ))}
+          </ul>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

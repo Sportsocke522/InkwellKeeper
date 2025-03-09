@@ -249,7 +249,7 @@ const ScannerPage = () => {
     console.log("Full Payload:", payload);
     
     // Zum Testen führen wir den fetch-Aufruf nicht aus, um Kosten zu sparen.
-    /*
+    
     try {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -276,7 +276,7 @@ const ScannerPage = () => {
     } catch (error) {
       console.error("Fehler beim Senden an die OpenAI Vision API:", error);
     }
-    */
+    
   };
   
   return (

@@ -230,21 +230,29 @@ const ScannerPage = () => {
       console.warn("Der aktuelle Provider wird nicht unterstützt:", scanProvider);
       return;
     }
+    // Entferne den Data-URL-Prefix vom Bild (optional) und setze ihn später wieder ein
     const base64Image = imageDataUrl.replace(/^data:image\/\w+;base64,/, "");
+    const fullImageUrl = `data:image/jpeg;base64,${base64Image}`;
+    
+    // Wir verwenden hier das kostengünstigste Modell "gpt-4o-mini" und bauen den multimodalen Payload wie in der offiziellen Dokumentation:
     const model = "gpt-4o-mini";
     const payload = {
       model: model,
       messages: [
         {
           role: "user",
-          content: `Was ist der Name und der Namenszusatz dieser Lorcana-Karte? Bild: data:image/jpeg;base64,${base64Image}`
+          content: [
+            { type: "text", text: "Was ist der Name und der Namenszusatz dieser Lorcana-Karte?" },
+            { type: "image_url", image_url: { url: fullImageUrl } }
+          ]
         }
       ],
       max_tokens: 50,
     };
-  
+    
+    // Logge den kompletten Payload in der Konsole, damit du den übermittelten Bildausschnitt sehen kannst:
     console.log("Full Payload:", payload);
-  
+    
     try {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -254,14 +262,13 @@ const ScannerPage = () => {
         },
         body: JSON.stringify(payload),
       });
-  
+      
       if (!response.ok) {
         throw new Error(`API-Fehler: ${response.status}`);
       }
       const data = await response.json();
       console.log("API Response:", data);
-  
-      // Verwende die typische Struktur der Chat-Completion-Antwort
+      // Extrahiere den Inhalt der ersten Antwortnachricht:
       const extractedName = data.choices?.[0]?.message?.content;
       console.log("Extrahierter Name:", extractedName);
       setScannedCards(prev => {
@@ -274,6 +281,7 @@ const ScannerPage = () => {
       console.error("Fehler beim Senden an die OpenAI Vision API:", error);
     }
   };
+  
   
   
   return (

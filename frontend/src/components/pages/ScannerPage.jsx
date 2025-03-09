@@ -14,6 +14,9 @@ const ScannerPage = () => {
   const [torchActive, setTorchActive] = useState(false);
   const [torchAvailable, setTorchAvailable] = useState(false);
   const [scannedCards, setScannedCards] = useState([]);
+  
+  // State für Scan-Animation (CSS-Klasse)
+  const [scanAnimation, setScanAnimation] = useState(false);
 
   // Referenzen für Video, Canvas und den Stream
   const videoRef = useRef(null);
@@ -22,6 +25,8 @@ const ScannerPage = () => {
 
   // Interval-Referenz für den Scan-Loop
   const scanIntervalRef = useRef(null);
+  // Referenz für den Verzögerungs-Timeout
+  const processingTimeoutRef = useRef(null);
   // Für die Detektion signifikanter Bildänderungen im roten Bereich
   const lastImageAvgRef = useRef(null);
 
@@ -33,6 +38,9 @@ const ScannerPage = () => {
     height: 0.55,
   });
 
+  // Empfindlichkeits-Schwelle (in Pixeln, hier als Beispiel 10)
+  const SENSITIVITY_THRESHOLD = 10;
+
   // Beim Mount: Seitentitel setzen und Scanprovider prüfen
   useEffect(() => {
     document.title = t("scanner_title") + " - " + t("inkwell");
@@ -40,8 +48,6 @@ const ScannerPage = () => {
       navigate("/");
     }
   }, [scanProvider, navigate, t]);
-
-  
 
   // Starte die Kamera, sobald das Popup angezeigt wird
   useEffect(() => {
@@ -113,6 +119,15 @@ const ScannerPage = () => {
     return total / (data.length / 4);
   };
 
+  // Funktion, um eine Scan-Animation zu triggern (z.B. eine CSS-Klasse hinzufügen)
+  const triggerScanAnimation = () => {
+    setScanAnimation(true);
+    // Nach 1 Sekunde Animation zurücksetzen
+    setTimeout(() => {
+      setScanAnimation(false);
+    }, 1000);
+  };
+
   // Startet den Loop, der in regelmäßigen Abständen das Kamerabild analysiert
   const startImageDetection = () => {
     if (scanIntervalRef.current) {
@@ -157,49 +172,84 @@ const ScannerPage = () => {
       // Weiter mit Bildverarbeitung...
       const currentAvg = computeAverageIntensity(redImageData);
       const lastAvg = lastImageAvgRef.current;
-      const threshold = 10; 
   
-      if (lastAvg === null || Math.abs(currentAvg - lastAvg) > threshold) {
+      // Verwende hier die einstellbare Empfindlichkeitsschwelle:
+      if (lastAvg === null || Math.abs(currentAvg - lastAvg) > SENSITIVITY_THRESHOLD) {
         lastImageAvgRef.current = currentAvg;
-        // Blauer Bereich: Namenszone
-        const blueX = (cardBox.x + cardBox.width * 0.015) * canvas.width;
-        const blueY = (cardBox.y + cardBox.height * 0.51) * canvas.height;
-        const blueWidth = cardBox.width * 0.70 * canvas.width;
-        const blueHeight = cardBox.height * 0.15 * canvas.height;
+        // Wenn noch kein Timeout läuft, 500ms warten, damit sich die Karte stabilisiert
+        if (!processingTimeoutRef.current) {
+          processingTimeoutRef.current = setTimeout(() => {
+            // Nach 500ms erneut den blauen Bereich abrufen
+            const blueX = (cardBox.x + cardBox.width * 0.015) * canvas.width;
+            const blueY = (cardBox.y + cardBox.height * 0.51) * canvas.height;
+            const blueWidth = cardBox.width * 0.70 * canvas.width;
+            const blueHeight = cardBox.height * 0.15 * canvas.height;
   
-        let blueImageData;
-        try {
-          blueImageData = context.getImageData(blueX, blueY, blueWidth, blueHeight);
-        } catch (e) {
-          console.error("Fehler beim Auslesen des blauen Bereichs:", e);
-          return;
+            // Erweiterung um 5px in jede Richtung, ohne über die Canvas-Grenzen zu gehen
+            const extendedBlueX = Math.max(blueX - 5, 0);
+            const extendedBlueY = Math.max(blueY - 5, 0);
+            const extendedBlueWidth = Math.min(blueWidth + 10, canvas.width - extendedBlueX);
+            const extendedBlueHeight = Math.min(blueHeight + 10, canvas.height - extendedBlueY);
+  
+            let blueImageData;
+            try {
+              blueImageData = context.getImageData(extendedBlueX, extendedBlueY, extendedBlueWidth, extendedBlueHeight);
+            } catch (e) {
+              console.error("Fehler beim Auslesen des erweiterten blauen Bereichs nach Verzögerung:", e);
+              processingTimeoutRef.current = null;
+              return;
+            }
+            // Blauen Bereich als Bild exportieren
+            const blueCanvas = document.createElement("canvas");
+            // Wichtig: Den Canvas für den exportierten Bereich auf die erweiterten Dimensionen setzen
+            blueCanvas.width = extendedBlueWidth;
+            blueCanvas.height = extendedBlueHeight;
+            const blueCtx = blueCanvas.getContext("2d");
+            blueCtx.putImageData(blueImageData, 0, 0);
+            const imageDataUrl = blueCanvas.toDataURL("image/png");
+  
+            // Trigger die Scan-Animation (CSS-Klasse im Kamerafenster)
+            triggerScanAnimation();
+  
+            // Sende (bzw. logge) den Payload an die API
+            sendToOpenAIVision(imageDataUrl);
+            processingTimeoutRef.current = null;
+          }, 500);
         }
-        // Blauen Bereich als Bild exportieren
-        const blueCanvas = document.createElement("canvas");
-        blueCanvas.width = blueWidth;
-        blueCanvas.height = blueHeight;
-        const blueCtx = blueCanvas.getContext("2d");
-        blueCtx.putImageData(blueImageData, 0, 0);
-        const imageDataUrl = blueCanvas.toDataURL("image/png");
-  
-        sendToOpenAIVision(imageDataUrl);
       } else {
         console.log("Keine signifikante Änderung im roten Bereich festgestellt.");
       }
     }, 1000);
   };
   
-
-  // Sendet den Bildausschnitt des blauen Bereichs an die OpenAI Vision API
+  // Sendet den Bildausschnitt des blauen Bereichs an die OpenAI Vision API (Testmodus: Payload wird komplett in der Konsole ausgegeben)
   const sendToOpenAIVision = async (imageDataUrl) => {
-    console.log("Sende Bild an OpenAI Vision API...");
+    console.log("Sende Bild an OpenAI Vision API... (Testmodus: Payload wird geloggt)");
     if (scanProvider !== "openai") {
       console.warn("Der aktuelle Provider wird nicht unterstützt:", scanProvider);
       return;
     }
-    // Entferne den Data-URL-Prefix, falls erforderlich, um nur den Base64-String zu erhalten.
+    // Entferne den Data-URL-Prefix, um nur den Base64-String zu erhalten.
     const base64Image = imageDataUrl.replace(/^data:image\/\w+;base64,/, "");
     
+    // Verwende als kostengünstigstes Modell "gpt-4o-mini"
+    const model = "gpt-4o-mini";
+    const payload = {
+      model: model,
+      messages: [
+        {
+          role: "user",
+          content: `Was ist der Name und der Namenszusatz dieser Lorcana-Karte? Bild: data:image/jpeg;base64,${base64Image}`
+        }
+      ],
+      max_tokens: 50,
+    };
+    
+    // Logge den kompletten Payload in der Konsole (inklusive des vollständigen Base64-Bildstrings)
+    console.log("Full Payload:", payload);
+    
+    // Zum Testen führen wir den fetch-Aufruf nicht aus, um Kosten zu sparen.
+    /*
     try {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -207,17 +257,7 @@ const ScannerPage = () => {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${OPENAI_API_KEY}`,
         },
-        body: JSON.stringify({
-          model: "gpt-4-turbo-2024-04-09",
-          messages: [
-            {
-              role: "user",
-              content: `Was ist der Name und der Namenszusatz dieser Lorcana-Karte? Bild: data:image/jpeg;base64,${base64Image}`
-            }
-          ],
-          max_tokens: 50,
-        }),
-        
+        body: JSON.stringify(payload),
       });
       
       if (!response.ok) {
@@ -236,9 +276,9 @@ const ScannerPage = () => {
     } catch (error) {
       console.error("Fehler beim Senden an die OpenAI Vision API:", error);
     }
+    */
   };
   
-
   return (
     <div className={styles.container}>
       <div className={styles.contentWrapper}>
@@ -287,7 +327,7 @@ const ScannerPage = () => {
             <button onClick={startScanning}>Start</button>
           </div>
         ) : (
-          <div className={styles.cameraContainer} style={{ position: "relative" }}>
+          <div className={`${styles.cameraContainer} ${scanAnimation ? styles.scanned : ""}`} style={{ position: "relative" }}>
             <video
               ref={videoRef}
               autoPlay

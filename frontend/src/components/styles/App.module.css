@@ -1491,7 +1491,7 @@ input:-webkit-autofill::first-line {
 }
 
 @media(max-width:1100px){
-    ._sideSection_xnfo2_223 {
+    .sideSection {
         background-color: var(--bg_one);
     }
 }

@@ -14,6 +14,7 @@ import Settings from "./components/pages/Settings";
 import Header from "./components/component/Header";
 import ProtectedRoute from "./components/component/ProtectedRoute"; 
 import ScannerPage from "./components/pages/ScannerPage";
+import ScannResult from "./components/pages/ScannResult";
 import { Toaster } from "sonner";
 import { Routes, Route, useLocation } from "react-router-dom";
 import i18n from "./i18n";
@@ -90,6 +91,7 @@ function App() {
           <Route path="/friendscollection" element={<FriendsCollection />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/scanner" element={<ScannerPage />} />
+          <Route path="/scannresult" element={<ScannResult />} />
         </Route>
           
         </Routes>

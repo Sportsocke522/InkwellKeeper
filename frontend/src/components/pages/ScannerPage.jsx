@@ -112,20 +112,31 @@ const ScannerPage = () => {
     const { data } = imageData;
     let total = 0;
     for (let i = 0; i < data.length; i += 4) {
-      // Einfacher Durchschnitt aus R, G und B
       const avg = (data[i] + data[i+1] + data[i+2]) / 3;
       total += avg;
     }
     return total / (data.length / 4);
   };
 
-  // Funktion, um eine Scan-Animation zu triggern (z.B. eine CSS-Klasse hinzufügen)
+  // Funktion, um eine Scan-Animation zu triggern (z.B. CSS-Klasse hinzufügen)
   const triggerScanAnimation = () => {
     setScanAnimation(true);
-    // Nach 1 Sekunde Animation zurücksetzen
     setTimeout(() => {
       setScanAnimation(false);
     }, 1000);
+  };
+
+  // Hilfsfunktion: Extrahiert aus dem langen API-Text nur den Kartennamen und Zusatz
+  const processExtractedName = (text) => {
+    // Sucht nach in Anführungszeichen gesetzten Textteilen
+    const matches = text.match(/"([^"]+)"/g);
+    if (matches && matches.length >= 2) {
+      const cardName = matches[0].replace(/"/g, '');
+      const cardSub = matches[1].replace(/"/g, '');
+      return `${cardName} - ${cardSub}`;
+    }
+    // Fallback: Kürze den Text auf die ersten 60 Zeichen
+    return text.slice(0, 60) + (text.length > 60 ? "…" : "");
   };
 
   // Startet den Loop, der in regelmäßigen Abständen das Kamerabild analysiert
@@ -140,7 +151,6 @@ const ScannerPage = () => {
         return;
       }
       const video = videoRef.current;
-      // Prüfen, ob die Video-Metadaten (Dimensionen) bereits geladen sind
       if (video.videoWidth === 0 || video.videoHeight === 0) {
         console.warn("Video-Dimensionen noch nicht verfügbar, überspringe diese Iteration.");
         return;
@@ -148,15 +158,10 @@ const ScannerPage = () => {
       
       const canvas = canvasRef.current;
       const context = canvas.getContext("2d");
-      
-      // Canvas auf die Videogröße anpassen
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-      
-      // Videoframe zeichnen
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
   
-      // Berechne den roten Bereich (gesamte Karte)
       const redX = cardBox.x * canvas.width;
       const redY = cardBox.y * canvas.height;
       const redWidth = cardBox.width * canvas.width;
@@ -170,23 +175,18 @@ const ScannerPage = () => {
         return;
       }
       
-      // Weiter mit Bildverarbeitung...
       const currentAvg = computeAverageIntensity(redImageData);
       const lastAvg = lastImageAvgRef.current;
   
-      // Verwende hier die einstellbare Empfindlichkeitsschwelle:
       if (lastAvg === null || Math.abs(currentAvg - lastAvg) > SENSITIVITY_THRESHOLD) {
         lastImageAvgRef.current = currentAvg;
-        // Wenn noch kein Timeout läuft, 500ms warten, damit sich die Karte stabilisiert
         if (!processingTimeoutRef.current) {
           processingTimeoutRef.current = setTimeout(() => {
-            // Nach 500ms erneut den blauen Bereich abrufen
             const blueX = (cardBox.x + cardBox.width * 0.015) * canvas.width;
             const blueY = (cardBox.y + cardBox.height * 0.51) * canvas.height;
             const blueWidth = cardBox.width * 0.70 * canvas.width;
             const blueHeight = cardBox.height * 0.15 * canvas.height;
   
-            // Erweiterung um 5px in jede Richtung, ohne über die Canvas-Grenzen zu gehen
             const extendedBlueX = Math.max(blueX - 5, 0);
             const extendedBlueY = Math.max(blueY - 5, 0);
             const extendedBlueWidth = Math.min(blueWidth + 10, canvas.width - extendedBlueX);
@@ -200,19 +200,14 @@ const ScannerPage = () => {
               processingTimeoutRef.current = null;
               return;
             }
-            // Blauen Bereich als Bild exportieren
             const blueCanvas = document.createElement("canvas");
-            // Wichtig: Den Canvas für den exportierten Bereich auf die erweiterten Dimensionen setzen
             blueCanvas.width = extendedBlueWidth;
             blueCanvas.height = extendedBlueHeight;
             const blueCtx = blueCanvas.getContext("2d");
             blueCtx.putImageData(blueImageData, 0, 0);
             const imageDataUrl = blueCanvas.toDataURL("image/png");
   
-            // Trigger die Scan-Animation (CSS-Klasse im Kamerafenster)
             triggerScanAnimation();
-  
-            // Sende (bzw. logge) den Payload an die API
             sendToOpenAIVision(imageDataUrl);
             processingTimeoutRef.current = null;
           }, 500);
@@ -223,18 +218,15 @@ const ScannerPage = () => {
     }, 1000);
   };
   
-  // Sendet den Bildausschnitt des blauen Bereichs an die OpenAI Vision API (Testmodus: Payload wird komplett in der Konsole ausgegeben)
+  // Sendet den Bildausschnitt an die OpenAI Vision API
   const sendToOpenAIVision = async (imageDataUrl) => {
     console.log("Sende Bild an OpenAI Vision API... (Testmodus: Payload wird geloggt)");
     if (scanProvider !== "openai") {
       console.warn("Der aktuelle Provider wird nicht unterstützt:", scanProvider);
       return;
     }
-    // Entferne den Data-URL-Prefix vom Bild (optional) und setze ihn später wieder ein
     const base64Image = imageDataUrl.replace(/^data:image\/\w+;base64,/, "");
     const fullImageUrl = `data:image/jpeg;base64,${base64Image}`;
-    
-    // Wir verwenden hier das kostengünstigste Modell "gpt-4o-mini" und bauen den multimodalen Payload wie in der offiziellen Dokumentation:
     const model = "gpt-4o-mini";
     const payload = {
       model: model,
@@ -250,7 +242,6 @@ const ScannerPage = () => {
       max_tokens: 50,
     };
     
-    // Logge den kompletten Payload in der Konsole, damit du den übermittelten Bildausschnitt sehen kannst:
     console.log("Full Payload:", payload);
     
     try {
@@ -268,12 +259,12 @@ const ScannerPage = () => {
       }
       const data = await response.json();
       console.log("API Response:", data);
-      // Extrahiere den Inhalt der ersten Antwortnachricht:
-      const extractedName = data.choices?.[0]?.message?.content;
-      console.log("Extrahierter Name:", extractedName);
+      const rawExtractedName = data.choices?.[0]?.message?.content;
+      const simplifiedName = processExtractedName(rawExtractedName);
+      console.log("Extrahierter Name (simplified):", simplifiedName);
       setScannedCards(prev => {
-        if (!prev.includes(extractedName)) {
-          return [...prev, extractedName];
+        if (!prev.includes(simplifiedName)) {
+          return [...prev, simplifiedName];
         }
         return prev;
       });
@@ -282,7 +273,14 @@ const ScannerPage = () => {
     }
   };
   
-  
+  // Funktion zum Beenden des Scanvorgangs und Navigation zur ScanResult-Seite
+  const finishScanning = () => {
+    // Stoppe den Scan-Loop
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+    }
+    navigate("/scannresult", { state: { scannedCards } });
+  };
   
   return (
     <div className={styles.container}>
@@ -348,6 +346,8 @@ const ScannerPage = () => {
                 {torchActive ? "🔦 Blitz aus" : "💡 Blitz an"}
               </button>
             )}
+            {/* Button, um das Scannen zu beenden */}
+            <button onClick={finishScanning}>Scannen fertig</button>
           </div>
         )}
 

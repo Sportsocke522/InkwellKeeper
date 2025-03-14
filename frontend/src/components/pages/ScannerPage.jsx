@@ -3,34 +3,35 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import styles from "../styles/App.module.css";
 
+import { MdFlashlightOff, MdFlashlightOn } from "react-icons/md";
+
 const ScannerPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const scanProvider = import.meta.env.VITE_SCANN_PROVIDER;
   const OPENAI_API_KEY = import.meta.env.VITE_AI_API;
 
-  // Popup- und Kamera-Zustände
+  // Popup and camera states
   const [showPopup, setShowPopup] = useState(true);
   const [torchActive, setTorchActive] = useState(false);
   const [torchAvailable, setTorchAvailable] = useState(false);
   const [scannedCards, setScannedCards] = useState([]);
+  const [wizardStep, setWizardStep] = useState(1);
   
-  // State für Scan-Animation (CSS-Klasse)
+  // State for scan animation (CSS class)
   const [scanAnimation, setScanAnimation] = useState(false);
 
-  // Referenzen für Video, Canvas und den Stream
+  // Refs for video, canvas and stream
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
 
-  // Interval-Referenz für den Scan-Loop
+  // Interval refs
   const scanIntervalRef = useRef(null);
-  // Referenz für den Verzögerungs-Timeout
   const processingTimeoutRef = useRef(null);
-  // Für die Detektion signifikanter Bildänderungen im roten Bereich
   const lastImageAvgRef = useRef(null);
 
-  // Einstellungen für den roten Rahmen (ganze Karte) als relative Werte
+  // Red frame settings as relative values
   const [cardBox, setCardBox] = useState({
     x: 0.10, 
     y: 0.20, 
@@ -38,10 +39,10 @@ const ScannerPage = () => {
     height: 0.55,
   });
 
-  // Empfindlichkeits-Schwelle (in Pixeln, hier als Beispiel 10)
-  const SENSITIVITY_THRESHOLD = 10;
+  // Sensitivity threshold
+  const SENSITIVITY_THRESHOLD = 100;
 
-  // Beim Mount: Seitentitel setzen und Scanprovider prüfen
+  // On mount: set title, check provider
   useEffect(() => {
     document.title = t("scanner_title") + " - " + t("inkwell");
     if (scanProvider === "none") {
@@ -49,17 +50,16 @@ const ScannerPage = () => {
     }
   }, [scanProvider, navigate, t]);
 
-  // Starte die Kamera, sobald das Popup angezeigt wird
+  // Start camera once popup is shown
   useEffect(() => {
     if (showPopup) {
       startCamera();
     }
   }, [showPopup]);
 
-  // Kamera starten und Stream einrichten
+  // Start camera
   const startCamera = async () => {
     try {
-      console.log("🎥 Kamera wird gestartet...");
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment" }
       });
@@ -67,24 +67,23 @@ const ScannerPage = () => {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
-      // Prüfe, ob der Torch (Blitz) unterstützt wird
       const track = stream.getVideoTracks()[0];
       if (track.getCapabilities()?.torch) {
         setTorchAvailable(true);
       }
-      console.log("✅ Kamera erfolgreich gestartet!");
     } catch (error) {
-      console.error("❌ Fehler beim Zugriff auf die Kamera:", error);
+      console.error("Error accessing camera:", error);
     }
   };
 
+  // If popup is closed, ensure the scanning video is still assigned the stream
   useEffect(() => {
     if (!showPopup && streamRef.current && videoRef.current) {
       videoRef.current.srcObject = streamRef.current;
     }
   }, [showPopup]);
 
-  // Umschalten der Taschenlampe
+  // Toggle torch
   const toggleTorch = () => {
     if (!streamRef.current) return;
     const track = streamRef.current.getVideoTracks()[0];
@@ -96,18 +95,16 @@ const ScannerPage = () => {
     }
   };
 
-  // Wird beim Klick auf "Start" aufgerufen: Popup ausblenden und Bildanalyse starten
+  // Called when user clicks "Start" on the popup
   const startScanning = () => {
-    console.log("📸 Start-Button gedrückt!");
     setShowPopup(false);
-    // Kurze Verzögerung, damit die UI aktualisiert wird
     setTimeout(() => {
-      console.log("🎥 Starte Bildanalyse...");
+      console.log("Begin image analysis...");
       startImageDetection();
     }, 1000);
   };
 
-  // Berechnet den durchschnittlichen Grauwert eines Bildbereichs aus den ImageData
+  // Compute average intensity
   const computeAverageIntensity = (imageData) => {
     const { data } = imageData;
     let total = 0;
@@ -118,41 +115,40 @@ const ScannerPage = () => {
     return total / (data.length / 4);
   };
 
-  // Funktion, um eine Scan-Animation zu triggern (z.B. CSS-Klasse hinzufügen)
+  // Trigger scanning animation
   const triggerScanAnimation = () => {
     setScanAnimation(true);
     setTimeout(() => {
       setScanAnimation(false);
-    }, 1000);
+    }, 2000);
   };
 
-  // Hilfsfunktion: Extrahiert aus dem langen API-Text nur den Kartennamen und Zusatz
+  // Extract card name from API text
   const processExtractedName = (text) => {
-    // Sucht nach in Anführungszeichen gesetzten Textteilen
+    if (!text) return null;
     const matches = text.match(/"([^"]+)"/g);
     if (matches && matches.length >= 2) {
       const cardName = matches[0].replace(/"/g, '');
       const cardSub = matches[1].replace(/"/g, '');
       return `${cardName} - ${cardSub}`;
     }
-    // Fallback: Kürze den Text auf die ersten 60 Zeichen
-    return text.slice(0, 60) + (text.length > 60 ? "…" : "");
+    return null;
   };
 
-  // Startet den Loop, der in regelmäßigen Abständen das Kamerabild analysiert
+  // Main scan loop
   const startImageDetection = () => {
     if (scanIntervalRef.current) {
       clearInterval(scanIntervalRef.current);
     }
     scanIntervalRef.current = setInterval(() => {
       if (!videoRef.current || !canvasRef.current) {
-        console.error("🚨 Video oder Canvas nicht verfügbar! Stoppe den Scan-Loop.");
+        console.error("Video or Canvas not available! Stopping scan loop.");
         clearInterval(scanIntervalRef.current);
         return;
       }
       const video = videoRef.current;
       if (video.videoWidth === 0 || video.videoHeight === 0) {
-        console.warn("Video-Dimensionen noch nicht verfügbar, überspringe diese Iteration.");
+        console.warn("Video dimensions not ready, skipping iteration.");
         return;
       }
       
@@ -162,6 +158,7 @@ const ScannerPage = () => {
       canvas.height = video.videoHeight;
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
   
+      // Red frame area
       const redX = cardBox.x * canvas.width;
       const redY = cardBox.y * canvas.height;
       const redWidth = cardBox.width * canvas.width;
@@ -182,6 +179,8 @@ const ScannerPage = () => {
         lastImageAvgRef.current = currentAvg;
         if (!processingTimeoutRef.current) {
           processingTimeoutRef.current = setTimeout(() => {
+
+            // Blue area
             const blueX = (cardBox.x + cardBox.width * 0.015) * canvas.width;
             const blueY = (cardBox.y + cardBox.height * 0.51) * canvas.height;
             const blueWidth = cardBox.width * 0.70 * canvas.width;
@@ -196,7 +195,7 @@ const ScannerPage = () => {
             try {
               blueImageData = context.getImageData(extendedBlueX, extendedBlueY, extendedBlueWidth, extendedBlueHeight);
             } catch (e) {
-              console.error("Fehler beim Auslesen des erweiterten blauen Bereichs nach Verzögerung:", e);
+              console.error("Error reading extended blue area:", e);
               processingTimeoutRef.current = null;
               return;
             }
@@ -213,16 +212,16 @@ const ScannerPage = () => {
           }, 500);
         }
       } else {
-        console.log("Keine signifikante Änderung im roten Bereich festgestellt.");
+        console.log("No significant change in red area detected.");
       }
     }, 1000);
   };
   
-  // Sendet den Bildausschnitt an die OpenAI Vision API
+  // Send the blue area to OpenAI
   const sendToOpenAIVision = async (imageDataUrl) => {
-    console.log("Sende Bild an OpenAI Vision API... (Testmodus: Payload wird geloggt)");
+    console.log("Sending image to OpenAI Vision API");
     if (scanProvider !== "openai") {
-      console.warn("Der aktuelle Provider wird nicht unterstützt:", scanProvider);
+      console.warn("Provider not supported:", scanProvider);
       return;
     }
     const base64Image = imageDataUrl.replace(/^data:image\/\w+;base64,/, "");
@@ -242,8 +241,6 @@ const ScannerPage = () => {
       max_tokens: 50,
     };
     
-    console.log("Full Payload:", payload);
-    
     try {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -261,104 +258,191 @@ const ScannerPage = () => {
       console.log("API Response:", data);
       const rawExtractedName = data.choices?.[0]?.message?.content;
       const simplifiedName = processExtractedName(rawExtractedName);
-      console.log("Extrahierter Name (simplified):", simplifiedName);
-      setScannedCards(prev => {
-        if (!prev.includes(simplifiedName)) {
-          return [...prev, simplifiedName];
-        }
-        return prev;
-      });
+      console.log("Extracted Name (simplified):", simplifiedName);
+      if (simplifiedName) {
+        setScannedCards(prev => {
+          if (!prev.includes(simplifiedName)) {
+            return [...prev, simplifiedName];
+          }
+          return prev;
+        });
+      }
     } catch (error) {
-      console.error("Fehler beim Senden an die OpenAI Vision API:", error);
+      console.error("Error sending to OpenAI Vision API:", error);
     }
   };
   
-  // Funktion zum Beenden des Scanvorgangs und Navigation zur ScanResult-Seite
+  // Finish scanning and navigate to result page
   const finishScanning = () => {
-    // Stoppe den Scan-Loop
     if (scanIntervalRef.current) {
       clearInterval(scanIntervalRef.current);
     }
     navigate("/scannresult", { state: { scannedCards } });
   };
+
+  useEffect(() => {
+    if (wizardStep === 2 && streamRef.current && videoRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [wizardStep]);
+  
   
   return (
     <div className={styles.container}>
       <div className={styles.contentWrapper}>
         {showPopup ? (
-          <div className={styles.popup}>
-            <h2>📷 {t("scanner_popup_title")}</h2>
-            <p>Richte die Karte so aus, dass sie in den Rahmen passt.</p>
-            <div className={styles.cameraPreview} style={{ position: "relative" }}>
-              <video ref={videoRef} autoPlay playsInline style={{ width: "100%" }}></video>
-              {/* Roter Rahmen: Gesamte Karte */}
-              <div
-                className={styles.overlayBox}
-                style={{
-                  position: "absolute",
-                  top: `${cardBox.y * 100}%`,
-                  left: `${cardBox.x * 100}%`,
-                  width: `${cardBox.width * 100}%`,
-                  height: `${cardBox.height * 100}%`,
-                  border: "2px solid red",
-                }}
-              ></div>
-              {/* Blauer Rahmen: Namensbereich */}
-              <div
-                className={styles.overlayBox}
-                style={{
-                  position: "absolute",
-                  top: `${(cardBox.y + cardBox.height * 0.51) * 100}%`,
-                  left: `${(cardBox.x + cardBox.width * 0.015) * 100}%`,
-                  width: `${cardBox.width * 0.70 * 100}%`,
-                  height: `${cardBox.height * 0.15 * 100}%`,
-                  border: "2px solid blue",
-                }}
-              ></div>
+          <div className={styles.popupOverlay}>
+            <div className={styles.popup}>
+            
+              {(() => {
+                switch (wizardStep) {
+                  case 1:
+                    return (
+                      <>
+                        <h2>{t("scanner_instructions_title")}</h2>
+                        <p>{t("scanner_instructions_text")}</p>
+                        
+                        <button
+                          className={`${styles.btn} ${styles["btn-primary"]}`}
+                          onClick={() => setWizardStep(2)}
+                        >
+                          {t("scanner_next")}
+                        </button>
+                      </>
+                    );
+                    case 2:
+                      return (
+                        <>
+                          <h2>{t("scanner_settings_title")}</h2>
+                          <p>{t("scanner_settings_text")}</p>
+                          <div className={styles.cameraPreview} style={{ position: "relative" }}>
+                            <video ref={videoRef} autoPlay playsInline style={{ width: "100%" }}></video>
+                            <div
+                              className={styles.overlayBox}
+                              style={{
+                                position: "absolute",
+                                top: `${cardBox.y * 100}%`,
+                                left: `${cardBox.x * 100}%`,
+                                width: `${cardBox.width * 100}%`,
+                                height: `${cardBox.height * 100}%`,
+                                border: "2px solid red",
+                              }}
+                            ></div>
+                            <div
+                              className={styles.overlayBox}
+                              style={{
+                                position: "absolute",
+                                top: `${(cardBox.y + cardBox.height * 0.51) * 100}%`,
+                                left: `${(cardBox.x + cardBox.width * 0.015) * 100}%`,
+                                width: `${cardBox.width * 0.70 * 100}%`,
+                                height: `${cardBox.height * 0.15 * 100}%`,
+                                border: "2px solid blue",
+                              }}
+                            ></div>
+                          </div>
+                          <div className={styles.adjustmentControls}>
+                            {["x", "y", "width", "height"].map((key) => {
+                              const labelTranslationKey = `scanner_label_${key}`; 
+                              return (
+                                <div key={key} className={styles.boxControllWrapper}>
+                                  <label>{t(labelTranslationKey)}</label>
+                                  <div className={styles.boxControllInner}>
+                                    <button
+                                      className={styles.quantityButton}
+                                      onClick={() =>
+                                        setCardBox((prev) => ({ ...prev, [key]: Math.max(prev[key] - 0.01, 0) }))
+                                      }
+                                    >
+                                      -
+                                    </button>
+                                    {cardBox[key].toFixed(2)}
+                                    <button
+                                      className={styles.quantityButton}
+                                      onClick={() =>
+                                        setCardBox((prev) => ({ ...prev, [key]: prev[key] + 0.01 }))
+                                      }
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <button onClick={startScanning} className={`${styles.btn} ${styles["btn-primary"]}`}>
+                          {t("scanner_start")}
+                        </button>
+                        </>
+                      );
+                  }
+                })()}
             </div>
-            {/* Steuerung zur Anpassung des roten Rahmens */}
-            <div className={styles.adjustmentControls}>
-              {["x", "y", "width", "height"].map((key) => (
-                <div key={key}>
-                  <label>{key.toUpperCase()}:</label>
-                  <button onClick={() => setCardBox(prev => ({ ...prev, [key]: Math.max(prev[key] - 0.01, 0) }))}>-</button>
-                  {cardBox[key].toFixed(2)}
-                  <button onClick={() => setCardBox(prev => ({ ...prev, [key]: prev[key] + 0.01 }))}>+</button>
-                </div>
-              ))}
-            </div>
-            <button onClick={startScanning}>Start</button>
           </div>
+
+          
         ) : (
-          <div className={`${styles.cameraContainer} ${scanAnimation ? styles.scanned : ""}`} style={{ position: "relative" }}>
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              onLoadedMetadata={() => {
-                console.log("Video-Metadaten geladen:", videoRef.current.videoWidth, videoRef.current.videoHeight);
-              }}
-              style={{ width: "100%" }}
-            ></video>
-            <canvas ref={canvasRef} style={{ display: "none" }}></canvas>
-            {torchAvailable && (
-              <button className={styles.flashButton} onClick={toggleTorch}>
-                {torchActive ? "🔦 Blitz aus" : "💡 Blitz an"}
-              </button>
-            )}
-            {/* Button, um das Scannen zu beenden */}
-            <button onClick={finishScanning}>Scannen fertig</button>
-          </div>
+          <>
+            <div
+              className={`${styles.cameraContainer} ${
+                scanAnimation ? styles.scanned : ""
+              }`}
+              style={{ position: "relative" }}
+              >
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  onLoadedMetadata={() => {
+                    console.log(
+                      "Video metadata loaded:",
+                      videoRef.current.videoWidth,
+                      videoRef.current.videoHeight
+                    );
+                  }}
+                  style={{ width: "100%" }}
+                ></video>
+                <canvas ref={canvasRef} style={{ display: "none" }}></canvas>
+                {torchAvailable && (
+                  <button className={`${styles.btn} ${styles.flashButton} ${styles["btn-primary"]}`}  onClick={toggleTorch}>
+                    {torchActive ? <MdFlashlightOff /> : <MdFlashlightOn />}
+                  </button>
+                )}
+                <button onClick={finishScanning} className={`${styles.btn} ${styles["btn-primary"]}`}>
+                  {t("scanner_finish")}
+                </button>
+                {scanAnimation && (
+                  <div
+                    className={styles.ocrloader}
+                    style={{
+                      position: "absolute",
+                      top: `${cardBox.y * 100}%`,
+                      left: `${cardBox.x * 100}%`,
+                      width: `${cardBox.width * 100}%`,
+                      height: `${cardBox.height * 100}%`,
+                    }}
+                  >
+                    <p>Scanning</p>
+                    <em></em>
+                    <span></span>
+                  </div>
+                )}
+                
+            </div>
+          
+
+            <div className={styles.scannedCards}>
+              <h2>{t("scanned_cards")}</h2>
+              <ul>
+                {scannedCards.map((card, index) => (
+                  <li key={index}>{card}</li>
+                ))}
+              </ul>
+            </div>
+          </>
+          
         )}
 
-        <div className={styles.scannedCards}>
-          <h2>📋 Erkannte Karten:</h2>
-          <ul>
-            {scannedCards.map((card, index) => (
-              <li key={index}>{card}</li>
-            ))}
-          </ul>
-        </div>
+        
       </div>
     </div>
   );

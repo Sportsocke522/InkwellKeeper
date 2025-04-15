@@ -174,6 +174,8 @@ const ScannerPage = () => {
       
       const currentAvg = computeAverageIntensity(redImageData);
       const lastAvg = lastImageAvgRef.current;
+
+      console.log(`Vorheriger Durchschnitt: ${lastAvg}, aktueller Durchschnitt: ${currentAvg}, Differenz: ${Math.abs(currentAvg - lastAvg)}`);
   
       if (lastAvg === null || Math.abs(currentAvg - lastAvg) > SENSITIVITY_THRESHOLD) {
         lastImageAvgRef.current = currentAvg;

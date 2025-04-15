@@ -170,7 +170,7 @@
   "enable_disable_registrations_desc": "Erlaubt neuen Nutzern, sich zu registrieren.",
   "enable_disable_see_friends_desc": "Ermöglicht es dir, Sammlungen von Freunden zu sehen.",
   "update_available": "Update verfügbar",
-  "update_now": "Jetzt aktualisieren"
+  "update_now": "Jetzt aktualisieren",
   
   
 
@@ -178,9 +178,42 @@
 
 
 
+  
+    "scanner_title": "Scanner",
+    "scanner_instructions_title": "Scanner-Anleitung",
+    "scanner_instructions_text": "Platzieren Sie Ihre Karte innerhalb des Rahmens. Passen Sie den Rahmen bei Bedarf an. Drücken Sie dann 'Weiter', um fortzufahren.",
+    "scanner_next": "Weiter",
+    "scanner_settings_title": "Scanner-Einstellungen",
+    "scanner_settings_text": "Passen Sie die Kameraeinstellungen und den Rahmen an. Drücken Sie 'Start', wenn Sie mit dem Scannen beginnen möchten.",
+    "scanner_start": "Start",
+    "scanner_finish": "Scan beenden",
+    "scanner_question": "Wie lautet der Kartenname und der Untertitel?",
+    "torch_on": "Blitz aktivieren",
+    "torch_off": "Blitz deaktivieren",
+    "scanned_cards": "Gescannte Karten",
+    "cards_remaining": "{{remaining}} von {{total}} Karten verbleibend",
+  
+    "scann_result_title": "Scan-Ergebnisse",
+    "extracted_card_name": "Extrahierter Kartenname",
+    "normal_quantity": "Normalmenge",
 
-
-
+    "discard": "Verwerfen",
+    "confirm": "Bestätigen",
+    "card_progress": "Karte {{current}} von {{total}}",
+    "to_your_collection": "zur Sammlung",
+    "no_card_found": "Keine Karte gefunden",
+    "error_adding_card": "Fehler beim Hinzufügen der Karte",
+    "warning_zero_quantity": "Die zusätzliche Menge darf nicht 0 sein.",
+    "warning_exceeds_count": "Die zusätzliche Menge überschreitet die gescannte Menge von {{max}}.",
+    "warning_no_card_found": "Keine gültige Karte gefunden. Bitte überprüfen Sie den Kartennamen.",
+    "scanned_count": "Gescannte Anzahl: {{count}}",
+    "owned_info": "Bereits vorhanden: {{owned}}. Zusätzlich hinzuzufügen: {{additional}}. Gesamt: {{total}}.",
+    "finish_popup_title": "Scan abgeschlossen",
+    "finish_popup_message": "Sie haben alle gescannten Karten überprüft. {{count}} Karten wurden Ihrer Sammlung hinzugefügt.",
+    "no_cards_scanned": "Es wurden keine Karten gescannt.",
+    "go_to_my_collection": "Zur Sammlung"
+  
+  
 
 
 

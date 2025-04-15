@@ -170,6 +170,50 @@
   "enable_disable_see_friends_desc": "Allows you to see friends' collections.",
   
   "update_available": "Update available",
-  "update_now": "Update now"
+  "update_now": "Update now",
+
+
+
+
+  
+  
+  
+    "scanner_title": "Scanner",
+    "scanner_instructions_title": "Scanner Instructions",
+    "scanner_instructions_text": "Place your card within the frame. Adjust the frame if needed. Then press Next to continue.",
+    "scanner_next": "Next",
+    "scanner_settings_title": "Scanner Settings",
+    "scanner_settings_text": "Adjust the camera settings and frame. When ready, press Start to begin scanning.",
+    "scanner_start": "Start",
+    "scanner_finish": "Finish Scanning",
+    "scanner_question": "What is the card name and subtitle?",
+    "torch_on": "Enable Torch",
+    "torch_off": "Disable Torch",
+    "scanned_cards": "Scanned Cards",
+    "cards_remaining": "{{remaining}} out of {{total}} cards remaining",
+  
+    "scann_result_title": "Scan Results",
+    "extracted_card_name": "Extracted Card Name",
+    "normal_quantity": "Normal Quantity",
+    "discard": "Discard",
+    "confirm": "Confirm",
+    "card_progress": "Card {{current}} of {{total}}",
+    "to_your_collection": "to your collection",
+    "no_card_found": "No card found",
+    "error_adding_card": "Error adding card",
+    "warning_zero_quantity": "The additional quantity cannot be zero.",
+    "warning_exceeds_count": "Total additional quantity exceed {{max}}.",
+    "warning_no_card_found": "No valid card found. Please check the card name.",
+    "scanned_count": "Scanned count: {{count}}",
+    "owned_info": "Already owned: {{owned}}. Additional to add: {{additional}}. Total if added: {{total}}.",
+    "finish_popup_title": "Scan Finished",
+    "finish_popup_message": "You have reviewed all scanned cards. {{count}} cards have been added to your collection.",
+    "no_cards_scanned": "No cards were scanned.",
+    "go_to_my_collection": "Go to My Collection"
+ 
+  
+
+  
+  
   
 }

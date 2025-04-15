@@ -175,7 +175,64 @@
       "enable_disable_registrations_desc": "Permite que nuevos usuarios se registren.",
       "enable_disable_see_friends_desc": "Permite ver las colecciones de amigos.",
       "update_available": "Actualización disponible",
-      "update_now": "Actualizar ahora"
+      "update_now": "Actualizar ahora",
       
+
+
+
+
+
+
+
+
+
+      
+        "scanner_title": "Escáner",
+        "scanner_instructions_title": "Instrucciones del Escáner",
+        "scanner_instructions_text": "Place su carta dentro del marco. Ajuste el marco si es necesario. Luego presione Siguiente para continuar.",
+        "scanner_next": "Siguiente",
+        "scanner_settings_title": "Configuración del Escáner",
+        "scanner_settings_text": "Ajuste la configuración de la cámara y el marco. Cuando esté listo, presione Iniciar para comenzar a escanear.",
+        "scanner_start": "Iniciar",
+        "scanner_finish": "Finalizar Escaneo",
+        "scanner_question": "What is the card name and subtitle?",  
+        "torch_on": "Activar Linterna",
+        "torch_off": "Desactivar Linterna",
+        "scanned_cards": "Cartas Escaneadas",
+        "cards_remaining": "{{remaining}} de {{total}} cartas restantes",
+      
+        "scann_result_title": "Resultados del Escaneo",
+        "extracted_card_name": "Nombre de la carta extraído",
+        "normal_quantity": "Cantidad Normal",
+        "discard": "Descartar",
+        "confirm": "Confirmar",
+        "card_progress": "Carta {{current}} de {{total}}",
+        "to_your_collection": "a tu colección",
+        "no_card_found": "No se encontró carta",
+        "error_adding_card": "Error al añadir la carta",
+        "warning_zero_quantity": "La cantidad adicional no puede ser cero.",
+        "warning_exceeds_count": "La cantidad adicional total no puede exceder de {{max}}.",
+        "warning_no_card_found": "No se encontró una carta válida. Por favor, revise el nombre de la carta.",
+        "scanned_count": "Cantidad escaneada: {{count}}",
+        "owned_info": "Ya en posesión: {{owned}}. A añadir: {{additional}}. Total si se añade: {{total}}.",
+        "finish_popup_title": "Escaneo Terminado",
+        "finish_popup_message": "Ha revisado todas las cartas escaneadas. Se han añadido {{count}} cartas a tu colección.",
+        "no_cards_scanned": "No se escanearon cartas.",
+        "go_to_my_collection": "Ir a Mi Colección"
+      
+      
+
+
+
+
+
+
+
+
+
+
+
+
+
     }
     

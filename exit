@@ -1,0 +1,53 @@
+[33mcommit d7b505c02cefe6402a0b4513038e874061b16147[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdev[m[33m)[m
+Author: sportsocke522 <tobiashoffmann@googlemail.com>
+Date:   Fri Mar 14 13:16:01 2025 +0100
+
+    update env.example
+
+[33mcommit 40644f16dfdbb9a4e3dbd0841540c4a5c279004d[m[33m ([m[1;31morigin/dev[m[33m)[m
+Author: sportsocke522 <tobiashoffmann@googlemail.com>
+Date:   Fri Mar 14 13:14:01 2025 +0100
+
+    Remove .env from tracking and update .gitignore
+
+[33mcommit f67eac0ce0ac5b43c74fcb43ead8c90099ca1b41[m
+Author: sportsocke522 <tobiashoffmann@googlemail.com>
+Date:   Fri Mar 14 13:10:34 2025 +0100
+
+    edit env
+
+[33mcommit 8c2d6f058ba85bccf63d4b25878b59974726e098[m
+Author: sportsocke522 <tobiashoffmann@googlemail.com>
+Date:   Sun Mar 9 00:02:16 2025 +0100
+
+    New dev test
+
+[33mcommit 24dd2751d4aa28176ccf786c68f479cea5c65774[m
+Author: sportsocke522 <tobiashoffmann@googlemail.com>
+Date:   Sat Mar 8 23:59:28 2025 +0100
+
+    New dev test
+
+[33mcommit dd505d736b8ebb0443733faf96b1bcfc89605a45[m
+Author: sportsocke522 <tobiashoffmann@googlemail.com>
+Date:   Sat Mar 8 23:58:02 2025 +0100
+
+    Remove .env from Git tracking
+
+[33mcommit 332f6bbd912c786166ad1c1346276098ac8db922[m
+Author: sportsocke522 <tobiashoffmann@googlemail.com>
+Date:   Mon Mar 3 18:37:43 2025 +0100
+
+    bugfixes for proxy usage
+
+[33mcommit e6a2ade5cbd9d9953190b28c2c60df7ac5bb1ee3[m
+Author: sportsocke522 <tobiashoffmann@googlemail.com>
+Date:   Mon Mar 3 14:41:52 2025 +0100
+
+    small Bugfix for use on server
+
+[33mcommit 1c71a0dceac8803055b32460eac8d075648d4758[m[33m ([m[1;33mtag: [m[1;33mv0.11[m[33m)[m
+Author: sportsocke522 <tobiashoffmann@googlemail.com>
+Date:   Mon Mar 3 13:38:19 2025 +0100
+
+    v0.11 -env support, update notify

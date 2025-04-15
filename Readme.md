@@ -104,6 +104,9 @@ Coming soon.
 
 ## Changelog
 ### v0.20
+- delete env file
+
+### v0.20
 - card scanner Beta
 
 ### v0.13

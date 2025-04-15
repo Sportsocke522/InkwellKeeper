@@ -103,7 +103,7 @@ A huge thanks to [lorcanajson.org](https://lorcanajson.org/) for providing the L
 Coming soon.
 
 ## Changelog
-### v0.20
+### v0.21
 - delete env file
 
 ### v0.20
@@ -132,4 +132,6 @@ Coming soon.
 
 ## License
 This project is licensed under the **GPL License**.
+
+
 

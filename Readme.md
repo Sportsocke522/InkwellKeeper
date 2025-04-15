@@ -1,7 +1,7 @@
 # Inkwell Keeper
 
 ## About
-Inkwell Keeper is a self-hosted solution for digitally managing your Lorcana card collection. It allows users to track their own cards, browse collections of friends and family, and organize decks efficiently. The tool is in an early development stage (v0.1) and continuously improving.
+Inkwell Keeper is a self-hosted solution for digitally managing your Lorcana card collection. It allows users to track their own cards, browse collections of friends and family, and organize decks efficiently. The tool is in an early development stage (v0.2) and continuously improving.
 
 ### Features
 - Digital collection management for Lorcana cards
@@ -10,6 +10,7 @@ Inkwell Keeper is a self-hosted solution for digitally managing your Lorcana car
 - Ability to see which friends own specific cards (for potential trades)
 - Self-hosted solution with Docker-based deployment
 - Available in **English, German, and Spanish**
+- **Card Scanner (Beta)** – Use a camera or webcam and a 3D-printed mount to quickly scan and add cards via AI recognition
 
 ## Disclaimer
 This project is currently in a very early stage (v0.1). Feature requests and bug reports are highly welcome! Please submit issues on GitHub if you encounter any problems or have suggestions.
@@ -55,10 +56,36 @@ Below are the most relevant environment variables that might need to be adjusted
 ### Database
 - `DATABASE_PORT=3003` – The port on which the database runs.
 
+### Card Scanner (Beta)
+- `VITE_SCANN_PROVIDER="openai"` – Choose between `"none"` (disable scanning) and `"openai"` (enable AI-based scanning).
+- `VITE_AI_API=""` – Your OpenAI API key for enabling card recognition.
+
 These are not all available environment variables, but they are the most commonly changed ones.
+
+## Updating the Application
+To update your Inkwell Keeper instance to the latest version:
+
+1. Pull the latest changes from the repository:
+   ```sh
+   git pull origin main
+   ```
+
+2. If there were changes to dependencies or build files, rebuild the Docker containers:
+   ```sh
+   docker-compose build
+   ```
+
+3. Restart the containers:
+   ```sh
+   docker-compose up -d
+   ```
+
+> ⚠️ Note: Always back up your `.env` file and database before updating!
 
 ## Detailed Description
 Inkwell Keeper enables users to maintain their Lorcana card collection in a structured and accessible way. While each user has their own collection, they can also browse through the collections of their friends, making it easier to track missing cards and consider potential trades. Additionally, the application offers deck-building capabilities, though currently, decks are only visible to their respective owners. Future updates will include features for sharing decks with friends.
+
+The **card scanner** is an optional feature (currently in beta), using image recognition to extract the card name from a photo. This works best when paired with a custom 3D-printed holder that ensures consistent framing and lighting.
 
 ### Special Thanks
 A huge thanks to [lorcanajson.org](https://lorcanajson.org/) for providing the Lorcana card data.
@@ -76,6 +103,9 @@ A huge thanks to [lorcanajson.org](https://lorcanajson.org/) for providing the L
 Coming soon.
 
 ## Changelog
+### v0.20
+- card scanner Beta
+
 ### v0.13
 - fix mobile css
 - implement PWA Support

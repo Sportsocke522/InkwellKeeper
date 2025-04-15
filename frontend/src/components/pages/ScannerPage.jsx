@@ -40,7 +40,7 @@ const ScannerPage = () => {
   });
 
   // Sensitivity threshold
-  const SENSITIVITY_THRESHOLD = 100;
+  const SENSITIVITY_THRESHOLD = 50;
 
   // On mount: set title, check provider
   useEffect(() => {
